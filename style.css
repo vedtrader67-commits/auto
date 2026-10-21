@@ -9,3 +9,17 @@
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 
 .footer-counter-link{color:#8cff91;text-decoration:none;margin-left:6px}.footer-counter-link:hover{text-decoration:underline}
+
+
+/* Target queue enhancement */
+.target-actions{display:flex;align-items:center;gap:12px;margin:12px 0 0}
+.target-actions .button{min-height:38px;padding:9px 13px;font-size:10px;flex:0 0 auto}
+.target-actions>span{color:#8e9e85;font:9px var(--mono)}
+.target-list{display:grid;gap:7px;margin:10px 0 20px}
+.target-chip{display:flex;align-items:center;gap:9px;min-width:0;padding:9px 10px;border:1px solid #34452f;background:#ffffff03;border-radius:8px}
+.target-chip-icon{display:grid;place-items:center;flex:0 0 25px;width:25px;height:25px;border:1px solid #425b35;background:#24331d;color:var(--green);border-radius:6px}
+.target-chip-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#c7d5be;font:10px var(--mono)}
+.target-remove{flex:0 0 auto;border:1px solid #3a4834;background:#192218;color:#9cad91;border-radius:5px;padding:6px 7px;font:8px var(--mono);letter-spacing:.04em}
+.target-remove:hover:not(:disabled){border-color:#7b9d68;color:#dff5d3}
+.target-remove:disabled{opacity:.4;cursor:not-allowed}
+@media(max-width:560px){.target-actions{align-items:flex-start;flex-direction:column;gap:8px}.target-actions .button{width:100%}.target-actions>span{font-size:9px}.target-chip{padding:8px}.target-chip-name{font-size:9px}}
