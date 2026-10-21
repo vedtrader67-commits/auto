@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b100e">
+  <meta name="description" content="Live visitor counter for the AUTO homepage, with tracked visits over the last 60 minutes.">
+  <title>Live Views | Minecraft AI View Lab</title>
+  <link rel="stylesheet" href="./style.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <div class="ambient ambient-a" aria-hidden="true"></div>
+  <div class="ambient ambient-b" aria-hidden="true"></div>
+  <div class="page">
+    <header class="topbar">
+      <a class="brand" href="../" aria-label="Back to Minecraft AI View Lab">
+        <span class="brand-cube" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <span><b>MINECRAFT <em>AI</em></b><small>TRAFFIC OBSERVER / 02</small></span>
+      </a>
+      <div class="top-actions">
+        <span id="connectionBadge" class="connection"><i></i> CONNECTING</span>
+        <a class="back-link" href="../">VIEW LAB ↗</a>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div>
+          <div class="eyebrow"><span></span> REAL VISITOR SIGNAL <b>/ LIVE MONITOR</b></div>
+          <h1>Live views<span>.</span><br><em>Actual traffic.</em></h1>
+          <p class="intro">A live counter for the main AUTO homepage. Watch tracked visits arrive and see activity across the last 60 minutes. No generated numbers.</p>
+          <div class="meta-pills"><span>◆ Remote counter</span><span>◆ 5-minute windows</span><span>◆ Refreshes every 30s</span></div>
+        </div>
+        <div class="signal-card" aria-label="Live connection status">
+          <div class="signal-orbit orbit-one"></div><div class="signal-orbit orbit-two"></div>
+          <div class="signal-core"><span class="pulse"></span><b>LIVE</b><small>VISITOR SIGNAL</small></div>
+          <span class="signal-label label-left">AUTO / HOME</span><span class="signal-label label-right">60 MIN</span>
+        </div>
+      </section>
+
+      <section class="summary-grid" aria-label="Traffic summary">
+        <article class="metric metric-main">
+          <div class="metric-head"><span>TOTAL TRACKED VISITS</span><span class="metric-icon">▦</span></div>
+          <strong id="totalViews" class="metric-number">--</strong>
+          <div class="metric-foot"><span class="dot"></span> Lifetime count for the homepage</div>
+        </article>
+        <article class="metric">
+          <div class="metric-head"><span>LAST 60 MINUTES</span><span class="metric-icon">↗</span></div>
+          <strong id="hourViews" class="metric-number">--</strong>
+          <div class="metric-foot">Sum of twelve 5-minute windows</div>
+        </article>
+        <article class="metric">
+          <div class="metric-head"><span>CURRENT 5 MIN</span><span class="metric-icon">◷</span></div>
+          <strong id="currentViews" class="metric-number">--</strong>
+          <div class="metric-foot">Newest activity window</div>
+        </article>
+        <article class="metric">
+          <div class="metric-head"><span>LAST CHECK</span><span class="metric-icon">⟳</span></div>
+          <strong id="updatedAt" class="metric-number time-number">Waiting</strong>
+          <div class="metric-foot" id="refreshState">Connecting to counter API</div>
+        </article>
+      </section>
+
+      <section class="content-grid">
+        <article class="panel chart-panel">
+          <div class="panel-heading">
+            <div><small>LIVE MONITOR / A1</small><h2>Traffic pulse</h2></div>
+            <button id="refreshButton" class="refresh-button" type="button"><span aria-hidden="true">⟳</span> REFRESH</button>
+          </div>
+          <div class="chart-topline"><div><strong id="chartTotal">--</strong><span>tracked visits over the last hour</span></div><span class="live-label"><i></i> LIVE DATA</span></div>
+          <div class="chart-wrap"><canvas id="trafficChart" role="img" aria-label="Tracked visits over twelve five-minute windows"></canvas><div id="chartEmpty" class="chart-empty">Waiting for the first counter response…</div></div>
+          <div class="chart-axis"><span>60 MIN AGO</span><span>30 MIN AGO</span><span>NOW</span></div>
+          <div id="bucketList" class="bucket-list" aria-label="Visits by five-minute window"></div>
+        </article>
+
+        <aside class="panel details-panel">
+          <div class="panel-heading">
+            <div><small>TRACKED PROPERTY / B1</small><h2>Site details</h2></div>
+            <span class="shield">✓</span>
+          </div>
+          <div class="property">
+            <span class="property-symbol">⌂</span>
+            <div><b>AUTO homepage</b><small>GitHub Pages</small></div>
+            <span class="property-status">ACTIVE</span>
+          </div>
+          <div class="detail-row"><span>Website</span><a href="../" target="_blank" rel="noopener noreferrer">Open homepage ↗</a></div>
+          <div class="detail-row"><span>Tracked path</span><code>/auto/</code></div>
+          <div class="detail-row"><span>Update interval</span><b>30 seconds</b></div>
+          <div class="detail-row"><span>Hourly window</span><b>12 × 5 minutes</b></div>
+          <div class="notice"><span>ⓘ</span><p><b>What counts?</b> This counter uses a remote service that deduplicates the same visitor for 30 minutes on a path. Hourly activity is therefore an estimate of tracked visit events, not a guaranteed count of every reload.</p></div>
+        </aside>
+      </section>
+
+      <section class="status-strip">
+        <span><i class="dot"></i> <b>COUNTER STATUS</b> <span id="statusText">Connecting…</span></span>
+        <span>NO SIMULATED TRAFFIC</span>
+      </section>
+      <footer><span>© MINECRAFT AI VIEW LAB</span><span>TRACKS THE AUTO HOMEPAGE ONLY · <a href="../">BACK TO VIEW LAB ↗</a></span></footer>
+    </main>
+  </div>
+</body>
+</html>
