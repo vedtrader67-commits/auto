@@ -8,7 +8,7 @@
 
   const el = {
     target: $('targetUrl'), slider: $('rateSlider'), rate: $('rateValue'),
-    rateOutput: $('rateOutput'), addTarget: $('addTargetButton'), targetList: $('targetList'), targetFeedback: $('targetFeedback'), total: $('totalEvents'), current: $('runEvents'),
+    rateOutput: $('rateOutput'), sessionSlider: $('sessionSlider'), sessionOutput: $('sessionOutput'), profileTitle: $('profileTitle'), addTarget: $('addTargetButton'), targetList: $('targetList'), targetFeedback: $('targetFeedback'), total: $('totalEvents'), current: $('runEvents'),
     uptime: $('uptimeValue'), runText: $('runStateText'), status: $('statusBadge'),
     form: $('generatorForm'), start: $('startButton'), stop: $('stopButton'),
     activity: $('activityList'), activityCount: $('activityCount'), activityStatus: $('activityStatus'),
@@ -19,7 +19,7 @@
   };
 
   const state = {
-    total: 0, current: 0, target: 'https://example.com', targets: [], rate: 5,
+    total: 0, current: 0, target: 'https://example.com', targets: [], rate: 5, sessions: 5,
     running: false, stopped: false, startedAt: null, elapsed: 0,
     timer: null, clock: null, toastTimer: null,
     logs: [], points: Array(MAX_POINTS).fill(0)
@@ -65,7 +65,7 @@
       localStorage.setItem(STORE_KEY, JSON.stringify({
         total: state.total, target: state.target, rate: state.rate,
         logs: state.logs.slice(0, MAX_LOGS), points: state.points.slice(-MAX_POINTS),
-        targets: state.targets.slice(0, 10)
+        targets: state.targets.slice(0, 10), sessions: state.sessions
       }));
     } catch (error) {
       console.warn('View Lab could not save local state.', error);
@@ -81,6 +81,7 @@
       if (Number.isSafeInteger(data.total) && data.total >= 0) state.total = data.total;
       if (typeof data.target === 'string' && data.target.length <= 2048) state.target = data.target;
       if (Number.isInteger(data.rate)) state.rate = Math.max(1, Math.min(60, data.rate));
+      if (Number.isInteger(data.sessions)) state.sessions = Math.max(1, Math.min(20, data.sessions));
       if (Array.isArray(data.targets)) state.targets = data.targets.map(validUrl).filter(Boolean).map((url) => url.href).slice(0, 10);
       if (Array.isArray(data.logs)) {
         state.logs = data.logs.filter((item) => item && typeof item.message === 'string' && Number.isFinite(item.time))
@@ -231,6 +232,7 @@
     el.start.disabled = active;
     el.stop.disabled = !active;
     el.slider.disabled = active;
+    if (el.sessionSlider) el.sessionSlider.disabled = active;
     el.target.disabled = active;
     if (el.addTarget) el.addTarget.disabled = active;
     renderTargets();
@@ -241,8 +243,11 @@
 
   function updateRate() {
     state.rate = Math.max(1, Math.min(60, Number(el.slider.value) || 1));
-    el.rate.textContent = String(state.rate);
-    el.rateOutput.textContent = state.rate + (state.rate === 1 ? ' event / min' : ' events / min');
+    el.rate.textContent = String(state.rate * state.sessions);
+    el.rateOutput.textContent = state.rate + (state.rate === 1 ? ' cycle/min/browser' : ' cycles/min/browser');
+    if (el.sessionSlider) el.sessionSlider.value = String(state.sessions);
+    if (el.sessionOutput) el.sessionOutput.textContent = state.sessions + (state.sessions === 1 ? ' session' : ' sessions');
+    if (el.profileTitle) el.profileTitle.textContent = state.sessions + ' parallel virtual browser' + (state.sessions === 1 ? '' : 's');
     const percent = ((state.rate - 1) / 59) * 100;
     el.slider.style.background = 'linear-gradient(90deg,var(--green) 0%,var(--green) ' + percent + '%,#34442f ' + percent + '%,#34442f 100%)';
   }
@@ -311,13 +316,15 @@
 
   function generateEvent() {
     if (!state.running) return;
-    state.current += 1;
-    state.total += 1;
-    state.points.push(state.current);
-    if (state.points.length > MAX_POINTS) state.points.shift();
-    const targetValue = state.targets.length ? state.targets[(state.current - 1) % state.targets.length] : state.target;
-    const host = validUrl(targetValue) ? new URL(targetValue).hostname : 'no-target-selected';
-    log('Virtual session #' + number(state.total), host + ' · simulated only · no request sent');
+    for (let browser = 1; browser <= state.sessions; browser += 1) {
+      state.current += 1;
+      state.total += 1;
+      state.points.push(state.current);
+      if (state.points.length > MAX_POINTS) state.points.shift();
+      const targetValue = state.targets.length ? state.targets[(state.current - 1) % state.targets.length] : state.target;
+      const host = validUrl(targetValue) ? new URL(targetValue).hostname : 'no-target-selected';
+      log('Virtual browser ' + browser + ' · session #' + number(state.total), host + ' · simulated only · no request sent');
+    }
     renderStats();
     save();
   }
@@ -359,13 +366,13 @@
     state.stopped = false;
     el.activity.scrollTop = 0;
     setMode('running');
-    log('Simulation started', url.hostname + ' · ' + state.rate + ' virtual events/min · reference only');
+    log('Simulation started', url.hostname + ' · ' + state.sessions + ' virtual browser sessions · local-only simulation');
     renderStats();
     save();
 
     state.timer = window.setInterval(generateEvent, Math.max(1000, Math.floor(60000 / state.rate)));
     state.clock = window.setInterval(renderStats, 1000);
-    toast('Generator started. Events are simulated locally.');
+    toast('Multi-browser simulation started. No target-site traffic is sent.');
   }
 
   function stop() {
@@ -466,6 +473,12 @@
     el.stop.addEventListener('click', stop);
     el.slider.addEventListener('input', updateRate);
     el.slider.addEventListener('change', save);
+    el.sessionSlider.addEventListener('input', function () {
+      state.sessions = Math.max(1, Math.min(20, Number(el.sessionSlider.value) || 1));
+      updateRate();
+      renderStats();
+    });
+    el.sessionSlider.addEventListener('change', save);
     el.target.addEventListener('change', function () {
       const url = validUrl(el.target.value);
       if (url) {
