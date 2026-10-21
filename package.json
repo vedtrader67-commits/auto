@@ -1,0 +1,17 @@
+{
+  "name": "minecraft-ai-view-lab",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Minecraft-themed browser-local website session simulator for UI testing and demonstrations.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js && node --check app.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
