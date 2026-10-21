@@ -325,15 +325,18 @@
   function start(event) {
     if (event) event.preventDefault();
     if (state.running) return;
-    const url = validUrl(el.target.value);
+    const inputValue = String(el.target.value || '').trim();
+    const url = inputValue ? validUrl(inputValue) : (state.targets.length ? validUrl(state.targets[0]) : null);
     if (!url) {
-      el.target.setCustomValidity('Enter a valid HTTP or HTTPS URL, for example https://example.com.');
+      el.target.setCustomValidity(inputValue
+        ? 'Enter a valid HTTP or HTTPS URL, for example https://example.com.'
+        : 'Add a target website before starting the simulation.');
       el.target.reportValidity();
       el.target.addEventListener('input', () => el.target.setCustomValidity(''), { once: true });
       return;
     }
 
-    if (!state.targets.includes(url.href)) {
+    if (inputValue && !state.targets.includes(url.href)) {
       if (state.targets.length >= 10) {
         toast('Target list is full. Remove a target before adding another.');
         return;
