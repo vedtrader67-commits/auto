@@ -6,7 +6,7 @@
   const SITE = "vedtrader67-commits.github.io";
   const HOME_PATH = "/auto/";
   const BUCKET_MS = 5 * 60 * 1000;
-  const REFRESH_MS = 30 * 1000;
+  const REFRESH_MS = 3 * 1000;
 
   const $ = (id) => document.getElementById(id);
   const els = {
@@ -160,7 +160,7 @@
       renderBuckets(buckets, recent);
       drawChart(recent);
       lastData = { total, hourTotal, recent, buckets };
-      setStatus(true, "Live counter connected · refreshes every 30 seconds");
+      setStatus(true, "Live counter connected · refreshes every 3 seconds");
     } catch (error) {
       console.error("Live counter refresh failed:", error);
       if (!lastData) {
