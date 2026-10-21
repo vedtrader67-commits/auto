@@ -54,7 +54,10 @@
               <div class="rate-heading"><label class="label" for="rateSlider">SIMULATION PACE</label><output id="rateOutput" for="rateSlider">5 events / min</output></div>
               <input id="rateSlider" class="range" type="range" min="1" max="60" step="1" value="5">
               <div class="range-labels"><span>1 / min · relaxed</span><span>60 / min · fast</span></div>
-              <div class="profile"><span class="profile-icon">▤</span><div><strong>Virtual session profile</strong><small>One simulated event per timer tick</small></div><b>LOCAL</b></div>
+              <div class="session-heading"><label class="label" for="sessionSlider">PARALLEL VIRTUAL BROWSERS</label><output id="sessionOutput" for="sessionSlider">5 sessions</output></div>
+              <input id="sessionSlider" class="range" type="range" min="1" max="20" step="1" value="5">
+              <div class="range-labels"><span>1 browser</span><span>20 browsers</span></div>
+              <div class="profile"><span class="profile-icon">▤</span><div><strong id="profileTitle">5 parallel virtual browsers</strong><small>Local-only sessions cycling through your target list</small></div><b>LOCAL</b></div>
               <div class="controls"><button id="startButton" class="button primary" type="submit">▶ &nbsp; Start generator</button><button id="stopButton" class="button secondary" type="button" disabled>Ⅱ &nbsp; Stop</button></div>
               <div class="fineprint">▣ &nbsp; Browser-local simulation. No real visits, ad impressions or analytics events are created.</div>
             </form>
