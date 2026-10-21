@@ -8,7 +8,7 @@
 
   const el = {
     target: $('targetUrl'), slider: $('rateSlider'), rate: $('rateValue'),
-    rateOutput: $('rateOutput'), total: $('totalEvents'), current: $('runEvents'),
+    rateOutput: $('rateOutput'), addTarget: $('addTargetButton'), targetList: $('targetList'), targetFeedback: $('targetFeedback'), total: $('totalEvents'), current: $('runEvents'),
     uptime: $('uptimeValue'), runText: $('runStateText'), status: $('statusBadge'),
     form: $('generatorForm'), start: $('startButton'), stop: $('stopButton'),
     activity: $('activityList'), activityCount: $('activityCount'), activityStatus: $('activityStatus'),
@@ -19,7 +19,7 @@
   };
 
   const state = {
-    total: 0, current: 0, target: 'https://example.com', rate: 5,
+    total: 0, current: 0, target: 'https://example.com', targets: [], rate: 5,
     running: false, stopped: false, startedAt: null, elapsed: 0,
     timer: null, clock: null, toastTimer: null,
     logs: [], points: Array(MAX_POINTS).fill(0)
@@ -64,7 +64,8 @@
     try {
       localStorage.setItem(STORE_KEY, JSON.stringify({
         total: state.total, target: state.target, rate: state.rate,
-        logs: state.logs.slice(0, MAX_LOGS), points: state.points.slice(-MAX_POINTS)
+        logs: state.logs.slice(0, MAX_LOGS), points: state.points.slice(-MAX_POINTS),
+        targets: state.targets.slice(0, 10)
       }));
     } catch (error) {
       console.warn('View Lab could not save local state.', error);
@@ -80,6 +81,7 @@
       if (Number.isSafeInteger(data.total) && data.total >= 0) state.total = data.total;
       if (typeof data.target === 'string' && data.target.length <= 2048) state.target = data.target;
       if (Number.isInteger(data.rate)) state.rate = Math.max(1, Math.min(60, data.rate));
+      if (Array.isArray(data.targets)) state.targets = data.targets.map(validUrl).filter(Boolean).map((url) => url.href).slice(0, 10);
       if (Array.isArray(data.logs)) {
         state.logs = data.logs.filter((item) => item && typeof item.message === 'string' && Number.isFinite(item.time))
           .slice(0, MAX_LOGS).map((item) => ({
@@ -142,6 +144,71 @@
     el.activity.append(fragment);
   }
 
+  function renderTargets() {
+    if (!el.targetList || !el.targetFeedback) return;
+    el.targetList.replaceChildren();
+    const count = state.targets.length;
+    el.targetFeedback.textContent = count ? count + ' target' + (count === 1 ? '' : 's') + ' saved' : 'No targets added yet';
+    state.targets.forEach((value, index) => {
+      const url = validUrl(value);
+      if (!url) return;
+      const row = document.createElement('div');
+      row.className = 'target-chip';
+      const icon = document.createElement('span');
+      icon.className = 'target-chip-icon';
+      icon.textContent = '↗';
+      const name = document.createElement('span');
+      name.className = 'target-chip-name';
+      name.textContent = url.hostname + (url.pathname !== '/' ? url.pathname : '');
+      name.title = url.href;
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'target-remove';
+      remove.textContent = 'REMOVE';
+      remove.disabled = state.running;
+      remove.setAttribute('aria-label', 'Remove target ' + url.hostname);
+      remove.addEventListener('click', () => removeTarget(index));
+      row.append(icon, name, remove);
+      el.targetList.append(row);
+    });
+  }
+
+  function addTarget() {
+    const typed = String(el.target.value || '').trim();
+    const url = validUrl(typed);
+    if (!url) {
+      el.target.setCustomValidity('Enter a valid HTTP or HTTPS URL, for example https://example.com.');
+      el.target.reportValidity();
+      el.target.addEventListener('input', () => el.target.setCustomValidity(''), { once: true });
+      return;
+    }
+    if (state.targets.includes(url.href)) {
+      toast('That target is already in your list.');
+      el.target.value = '';
+      return;
+    }
+    if (state.targets.length >= 10) {
+      toast('You can save up to 10 targets in this demo.');
+      return;
+    }
+    state.targets.push(url.href);
+    state.target = url.href;
+    el.target.value = '';
+    el.target.setCustomValidity('');
+    renderTargets();
+    save();
+    toast('Target added. The run will simulate events only.');
+  }
+
+  function removeTarget(index) {
+    if (state.running || index < 0 || index >= state.targets.length) return;
+    const removed = state.targets.splice(index, 1)[0];
+    if (state.target === removed) state.target = state.targets[0] || 'https://example.com';
+    renderTargets();
+    save();
+    toast('Target removed from the local list.');
+  }
+
   function log(message, detail) {
     state.logs.unshift({
       time: Date.now(), message: String(message), detail: String(detail || ''),
@@ -165,6 +232,8 @@
     el.stop.disabled = !active;
     el.slider.disabled = active;
     el.target.disabled = active;
+    if (el.addTarget) el.addTarget.disabled = active;
+    renderTargets();
     el.runText.textContent = active ? 'Generator is running' : mode === 'stopped' ? 'Stopped by user' : 'Ready to launch';
     el.activityStatus.innerHTML = '<i' + (active ? ' class="active"' : '') + '></i> ' +
       (active ? 'Generating local events' : mode === 'stopped' ? 'Run stopped' : 'Waiting for a run');
@@ -246,7 +315,8 @@
     state.total += 1;
     state.points.push(state.current);
     if (state.points.length > MAX_POINTS) state.points.shift();
-    const host = validUrl(state.target) ? new URL(state.target).hostname : 'no-target-selected';
+    const targetValue = state.targets.length ? state.targets[(state.current - 1) % state.targets.length] : state.target;
+    const host = validUrl(targetValue) ? new URL(targetValue).hostname : 'no-target-selected';
     log('Virtual session #' + number(state.total), host + ' · simulated only · no request sent');
     renderStats();
     save();
@@ -263,7 +333,21 @@
       return;
     }
 
-    state.target = url.href;
+    if (!state.targets.includes(url.href)) {
+      if (state.targets.length >= 10) {
+        toast('Target list is full. Remove a target before adding another.');
+        return;
+      }
+      state.targets.push(url.href);
+    }
+    if (!state.targets.length) {
+      el.target.setCustomValidity('Add a target website before starting the simulation.');
+      el.target.reportValidity();
+      return;
+    }
+    state.target = state.targets[0];
+    el.target.value = '';
+    renderTargets();
     state.current = 0;
     state.elapsed = 0;
     state.startedAt = Date.now();
@@ -315,7 +399,7 @@
   }
 
   function openTarget() {
-    const url = validUrl(el.target.value);
+    const url = validUrl(el.target.value) || (state.targets.length ? validUrl(state.targets[0]) : null);
     if (!url) {
       el.target.setCustomValidity('Enter a valid HTTP or HTTPS URL first.');
       el.target.reportValidity();
@@ -371,6 +455,7 @@
     el.slider.value = String(state.rate);
     updateRate();
     setMode('standby');
+    renderTargets();
     renderLogs();
     renderStats();
 
@@ -386,6 +471,7 @@
         save();
       }
     });
+    el.addTarget.addEventListener('click', addTarget);
     el.openTarget.addEventListener('click', openTarget);
     el.export.addEventListener('click', exportCsv);
     el.reset.addEventListener('click', reset);
