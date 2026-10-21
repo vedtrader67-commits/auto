@@ -46,9 +46,11 @@
           <article class="panel">
             <div class="panel-title"><div><small>CONTROL ROOM / A1</small><h2>Launch simulation</h2></div><span id="statusBadge" class="status"><i></i> STANDBY</span></div>
             <form id="generatorForm" novalidate>
-              <label class="label" for="targetUrl">TARGET URL <span>REFERENCE ONLY</span></label>
+              <label class="label" for="targetUrl">ADD TARGET WEBSITE <span>SIMULATION ONLY</span></label>
               <div class="url-field"><span aria-hidden="true">↗</span><input id="targetUrl" name="targetUrl" type="url" inputmode="url" autocomplete="url" placeholder="https://your-test-site.example" value="https://example.com" maxlength="2048" required><button id="openTargetButton" type="button">OPEN ↗</button></div>
-              <p class="hint">The URL is a label for the run. The generator never opens it or sends requests to it.</p>
+              <p class="hint">Add up to 10 target URLs. They are used as labels in this local demo. No visits or requests are sent to those websites.</p>
+              <div class="target-actions"><button id="addTargetButton" class="button secondary" type="button">＋ Add target</button><span id="targetFeedback">No targets added yet</span></div>
+              <div id="targetList" class="target-list" aria-live="polite"></div>
               <div class="rate-heading"><label class="label" for="rateSlider">SIMULATION PACE</label><output id="rateOutput" for="rateSlider">5 events / min</output></div>
               <input id="rateSlider" class="range" type="range" min="1" max="60" step="1" value="5">
               <div class="range-labels"><span>1 / min · relaxed</span><span>60 / min · fast</span></div>
