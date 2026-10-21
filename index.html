@@ -1,106 +1,34 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#10150f">
-  <meta name="description" content="A Minecraft-themed browser-local session simulator for dashboard testing.">
-  <title>Minecraft AI · View Lab</title>
-  <link rel="stylesheet" href="./style.css">
-  <script src="./app.js" defer></script>
-  <script src="./view-tracker.js" defer></script>
-</head>
-<body>
-  <div class="glow glow-one" aria-hidden="true"></div><div class="glow glow-two" aria-hidden="true"></div>
-  <div class="shell">
-    <header class="topbar">
-      <a class="brand" href="#top" aria-label="Minecraft AI View Lab home">
-        <span class="block-logo" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-        <span><strong>MINECRAFT <b>AI</b></strong><small>VIEW LAB / 01</small></span>
-      </a>
-      <div class="top-actions"><span class="mode"><i></i> SIMULATION MODE</span><button id="helpButton" class="help-button" type="button" aria-label="About this tool">?</button></div>
-    </header>
-    <main id="top">
-      <section class="hero">
-        <div class="hero-copy">
-          <div class="eyebrow"><i></i> CREATOR TOOLKIT <span>/ SANDBOX</span></div>
-          <h1>Auto View<br><em>Generator.</em></h1>
-          <p>Run a controllable stream of <strong>simulated sessions</strong> to test the dashboard, counters, activity feed and run controls. <strong>No visits are sent to your target website.</strong></p>
-          <div class="pills"><span>◆ Local simulation</span><span>◆ No API key</span><span>◆ Mobile friendly</span></div>
-        </div>
-        <div class="cube-scene" aria-hidden="true">
-          <div class="cube-shadow"></div><div class="cube"><span class="cube-top"></span><span class="cube-left"></span><span class="cube-right"></span></div>
-          <span class="float-chip chip-one">+1 SIM</span><span class="float-chip chip-two">LIVE LAB</span>
-        </div>
-      </section>
-
-      <section class="stats" aria-label="Simulation statistics">
-        <article class="stat stat-accent"><div class="stat-head"><span>TOTAL SIMULATED</span><b>▦</b></div><strong id="totalEvents">0</strong><small><i class="green-dot"></i> Local demo events only</small></article>
-        <article class="stat"><div class="stat-head"><span>CURRENT RUN</span><b>◈</b></div><strong id="runEvents">0</strong><small>Events this run</small></article>
-        <article class="stat"><div class="stat-head"><span>EVENT RATE</span><b>↗</b></div><strong><span id="rateValue">5</span><sup> / min</sup></strong><small>Chosen simulation pace</small></article>
-        <article class="stat"><div class="stat-head"><span>RUN UPTIME</span><b>◷</b></div><strong class="monospace" id="uptimeValue">00:00</strong><small id="runStateText">Ready to launch</small></article>
-      </section>
-
-      <section class="dashboard">
-        <div class="column">
-          <article class="panel">
-            <div class="panel-title"><div><small>CONTROL ROOM / A1</small><h2>Launch simulation</h2></div><span id="statusBadge" class="status"><i></i> STANDBY</span></div>
-            <form id="generatorForm" novalidate>
-              <label class="label" for="targetUrl">ADD TARGET WEBSITE <span>SIMULATION ONLY</span></label>
-              <div class="url-field"><span aria-hidden="true">↗</span><input id="targetUrl" name="targetUrl" type="url" inputmode="url" autocomplete="url" placeholder="https://your-test-site.example" value="https://example.com" maxlength="2048" required><button id="openTargetButton" type="button">OPEN ↗</button></div>
-              <p class="hint">Add up to 10 target URLs. They are used as labels in this local demo. No visits or requests are sent to those websites.</p>
-              <div class="target-actions"><button id="addTargetButton" class="button secondary" type="button">＋ Add target</button><span id="targetFeedback">No targets added yet</span></div>
-              <div id="targetList" class="target-list" aria-live="polite"></div>
-              <div class="rate-heading"><label class="label" for="rateSlider">SIMULATION PACE</label><output id="rateOutput" for="rateSlider">5 events / min</output></div>
-              <input id="rateSlider" class="range" type="range" min="1" max="60" step="1" value="5">
-              <div class="range-labels"><span>1 / min · relaxed</span><span>60 / min · fast</span></div>
-              <div class="session-heading"><label class="label" for="sessionSlider">PARALLEL VIRTUAL BROWSERS</label><output id="sessionOutput" for="sessionSlider">5 sessions</output></div>
-              <input id="sessionSlider" class="range" type="range" min="1" max="20" step="1" value="5">
-              <div class="range-labels"><span>1 browser</span><span>20 browsers</span></div>
-              <div class="profile"><span class="profile-icon">▤</span><div><strong id="profileTitle">5 parallel virtual browsers</strong><small>Local-only sessions cycling through your target list</small></div><b>LOCAL</b></div>
-              <div class="controls"><button id="startButton" class="button primary" type="submit">▶ &nbsp; Start generator</button><button id="stopButton" class="button secondary" type="button" disabled>Ⅱ &nbsp; Stop</button></div>
-              <div class="fineprint">▣ &nbsp; Browser-local simulation. No real visits, ad impressions or analytics events are created.</div>
-            </form>
-          </article>
-
-          <article class="panel chart-panel">
-            <div class="panel-title"><div><small>ACTIVITY SIGNAL / A2</small><h2>Session pulse</h2></div><span class="legend"><i></i> Simulated</span></div>
-            <div class="chart-summary"><strong id="chartPeak">0</strong><span>events generated this run</span></div>
-            <div class="chart-wrap"><canvas id="activityChart" role="img" aria-label="Chart of recent simulated events"></canvas><div id="chartEmpty" class="chart-empty">Start a run to light up the signal.</div></div>
-            <div class="chart-labels"><span>START</span><span>RECENT ACTIVITY</span><span>NOW</span></div>
-          </article>
-        </div>
-
-        <div class="column">
-          <article class="panel">
-            <div class="panel-title"><div><small>EVENT STREAM / B1</small><h2>Live activity</h2></div><span class="log-count"><b id="activityCount">0</b> LOGS</span></div>
-            <div class="log-toolbar"><span id="activityStatus"><i></i> Waiting for a run</span><button id="clearLogButton" class="text-button" type="button">CLEAR LOG</button></div>
-            <div id="activityList" class="activity-list" aria-live="polite" aria-relevant="additions"></div>
-            <div class="log-foot"><i></i> EVENTS ARE LOCAL TO THIS BROWSER</div>
-          </article>
-
-          <article class="panel tools-panel">
-            <div class="panel-title"><div><small>UTILITIES / B2</small><h2>Run tools</h2></div><span class="tool-symbol">⌘</span></div>
-            <button id="exportButton" class="tool-row" type="button"><span class="tool-icon">↓</span><span><strong>Export event log</strong><small>Download a CSV of simulated events</small></span><b>↗</b></button>
-            <button id="resetButton" class="tool-row" type="button"><span class="tool-icon muted">↻</span><span><strong>Reset counters</strong><small>Clear local stats and activity</small></span><b>↗</b></button>
-            <div class="notice"><span>ⓘ</span><p><strong>Keep the numbers honest.</strong> This lab is for UI demos and local testing. Simulated events are not genuine website visitors and must not be presented as real traffic.</p></div>
-          </article>
-        </div>
-      </section>
-      <section class="system-strip"><span><i class="green-dot"></i> SYSTEM READY</span><span>VERSION 1.0.0</span><span>BUILT FOR THE BLOCKS</span></section>
-      <footer><span>© MINECRAFT AI VIEW LAB · <a class="footer-counter-link" href="./live-counter/">LIVE VIEW COUNTER ↗</a></span><span>SIMULATE THE DASHBOARD, NOT THE INTERNET.</span></footer>
-    </main>
-  </div>
-
-  <dialog id="helpDialog" class="help-dialog">
-    <div class="dialog-head"><small>FIELD GUIDE</small><button id="closeHelpButton" class="help-button" type="button" aria-label="Close information">×</button></div>
-    <h2>What does this generator do?</h2>
-    <p>It creates virtual session events inside this dashboard so you can test the counter, activity feed, controls and chart. All counts are saved in this browser only.</p>
-    <div class="guide-row"><b>01</b><p><strong>No target traffic</strong><br>The URL is only a label. The app does not send repeated requests or create real page views.</p></div>
-    <div class="guide-row"><b>02</b><p><strong>Manual inspection</strong><br>Use Open to visit the URL yourself in a new tab when you need to inspect a site.</p></div>
-    <div class="guide-row"><b>03</b><p><strong>Clear reporting</strong><br>Exported rows are marked simulated, so they cannot be mistaken for real analytics.</p></div>
-    <button id="gotItButton" class="button primary dialog-done" type="button">Got it, let's build</button>
-  </dialog>
-  <div id="toast" class="toast" role="status" aria-live="polite"></div>
-</body>
-</html>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#10150f"><title>Site Test Console</title>
+<style>
+:root{color-scheme:dark;--bg:#10150f;--panel:#192218;--line:#34452f;--text:#f1f5ed;--muted:#9eae94;--green:#9ef66a}*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 10% 0%,#263820,transparent 40%),var(--bg);color:var(--text);font:15px system-ui,sans-serif;min-height:100vh;padding:22px}.wrap{max-width:760px;margin:0 auto}.brand{font:700 12px monospace;letter-spacing:.16em;color:var(--green);padding:16px 0;border-bottom:1px solid var(--line)}h1{font-size:clamp(36px,8vw,60px);letter-spacing:-.06em;line-height:1;margin:34px 0 14px}h1 span{color:var(--green)}p{color:var(--muted);line-height:1.7}.panel{margin-top:24px;background:#192218eF;border:1px solid var(--line);border-radius:16px;padding:22px}label{display:block;font:11px monospace;letter-spacing:.1em;color:#bdcbb4;margin:18px 0 9px}input[type=url],input[type=number]{width:100%;padding:14px;background:#10160f;border:1px solid #405239;border-radius:8px;color:white;font:14px monospace}input[type=range]{width:100%;accent-color:var(--green)}.rangehead{display:flex;justify-content:space-between;gap:12px;align-items:center}.rangehead output{color:var(--green);font:700 18px monospace}.buttons{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}button{border-radius:8px;padding:13px 17px;font-weight:800;border:1px solid #45613a;cursor:pointer}.primary{background:var(--green);color:#14220e}.secondary{background:#222d1f;color:#e5f0de}.result{margin-top:18px;padding:14px;border:1px solid var(--line);border-radius:9px;overflow-wrap:anywhere}.pill{display:inline-block;border:1px solid #45613a;border-radius:30px;padding:5px 9px;color:var(--green);font:10px monospace}.small{font-size:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.metric{background:#10160f;border:1px solid var(--line);border-radius:9px;padding:14px}.metric strong{display:block;font-size:25px;margin-top:8px}.muted{color:var(--muted)}.warning{font-size:12px;padding:12px;background:#2c2718;border:1px solid #63542b;border-radius:8px;color:#e9d9a6;line-height:1.6}a{color:var(--green)}@media(max-width:520px){body{padding:16px}.panel{padding:17px}.grid{grid-template-columns:1fr}}
+</style>
+</head><body><main class="wrap">
+<div class="brand">SITE TEST CONSOLE / 01</div>
+<h1>Test your site.<br><span>See it live.</span></h1>
+<p>A compact console for checking a website and planning an authorized load test. Live check sends one request only. The client slider is a test-plan setting, not 100 real browsers.</p>
+<section class="panel">
+<span class="pill">LIVE SITE CHECK</span>
+<form id="checkForm">
+<label for="targetUrl">WEBSITE URL</label>
+<input id="targetUrl" type="url" placeholder="https://your-site.example" value="https://example.com" required maxlength="2048">
+<div class="buttons"><button class="primary" type="submit" id="checkButton">Check website ↗</button><button class="secondary" type="button" id="openButton">Open site</button></div>
+</form>
+<div id="result" class="result" aria-live="polite">Ready. A check makes one request and does not generate repeat visits.</div>
+<div class="grid" style="margin-top:12px"><div class="metric"><span class="muted small">CHECKS THIS SESSION</span><strong id="checks">0</strong></div><div class="metric"><span class="muted small">LAST RESPONSE TIME</span><strong id="latency">--</strong></div></div>
+</section>
+<section class="panel">
+<span class="pill">LOAD TEST PLANNER</span>
+<label for="clients" class="rangehead"><span>PLANNED CONCURRENT CLIENTS</span><output id="clientOutput">10</output></label>
+<input id="clients" type="range" min="1" max="100" value="10">
+<div class="rangehead small muted"><span>1 client</span><span>100 clients</span></div>
+<label for="duration">TEST DURATION (MINUTES)</label><input id="duration" type="number" min="1" max="10" value="1">
+<div class="result"><strong id="planTitle">10 clients · 1 minute</strong><p id="planText" class="small">This is a planning estimate only. No concurrent clients are launched from this static page.</p></div>
+<div class="warning">Only run load tests against sites you own or have explicit permission to test. A GitHub Pages site is frontend-only, so it cannot launch real isolated browsers or safely coordinate a load test by itself.</div>
+</section>
+<p class="small">Built for transparent checks. A successful browser-side check depends on the target site's CORS policy; “blocked by browser” does not necessarily mean the site is down.</p>
+<footer class="small muted">SITE TEST CONSOLE · <a href="./live-counter/">Live counter</a></footer>
+</main><script src="./app.js" defer></script></body></html>
