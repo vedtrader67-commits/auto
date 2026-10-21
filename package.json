@@ -1,8 +1,8 @@
 {
-  "name": "minecraft-ai-view-lab",
-  "version": "1.0.0",
+  "name": "authorized-browser-test-lab",
+  "version": "2.0.0",
   "private": true,
-  "description": "Minecraft-themed browser-local website session simulator for UI testing and demonstrations.",
+  "description": "Controlled, allowlisted multi-session Chromium testing dashboard with live status and previews.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -12,6 +12,7 @@
     "node": ">=20"
   },
   "dependencies": {
-    "express": "^4.21.2"
+    "express": "4.21.2",
+    "playwright": "1.64.1"
   }
 }
