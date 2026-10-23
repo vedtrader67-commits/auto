@@ -1,4 +1,4 @@
-name: Deploy NOVA Phone to GitHub Pages
+name: Deploy Focus Mode to GitHub Pages
 
 on:
   push:
