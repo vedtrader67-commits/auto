@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#10151c">
+<meta name="description" content="Unofficial browser driving remake using assets imported locally from your DrDriving game archive.">
+<title>DRIVING WEB PORT · V1</title>
+<style>
+:root{--bg:#10151c;--panel:#18212c;--panel2:#202d39;--line:#344555;--text:#f5f8fb;--muted:#9aabba;--green:#7ff2a4;--gold:#ffd66b;--red:#ff6e73}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}button,input,select{font:inherit}button{border:0;color:inherit;cursor:pointer;touch-action:manipulation}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--green);outline-offset:3px}#stage{position:fixed;inset:0;background:#8db9d8}#gameCanvas{display:block;width:100%;height:100%;outline:none}#shade{position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,#10151c45 0%,transparent 22%,transparent 60%,#10151c80 100%)}.topbar{position:absolute;z-index:4;left:12px;right:12px;top:calc(10px + env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between;gap:10px;pointer-events:none}.brand{font-size:12px;font-weight:950;letter-spacing:.2em;text-shadow:0 2px 12px #0009}.brand span{color:var(--green)}.top-actions{display:flex;gap:8px;pointer-events:auto}.iconbtn{background:#111b27c9;border:1px solid #ffffff2b;border-radius:12px;padding:10px 12px;font-size:12px;font-weight:800;backdrop-filter:blur(10px)}.hud{position:absolute;z-index:4;top:58px;left:12px;display:none;gap:8px;align-items:flex-start}.hudcard{min-width:74px;padding:9px 12px;border-radius:14px;background:#111923d9;border:1px solid #ffffff28;backdrop-filter:blur(10px);box-shadow:0 8px 28px #0002}.hudlabel{display:block;font-size:9px;letter-spacing:.14em;color:#a8b9c7;font-weight:900}.hudvalue{display:block;font-size:21px;font-weight:950;line-height:1.3}.hudvalue small{font-size:10px;color:#bfccd5}.missionprogress{width:110px;height:4px;border-radius:5px;background:#ffffff24;overflow:hidden;margin-top:5px}.missionprogress span{display:block;height:100%;width:0;background:var(--green)}.overlay{position:absolute;z-index:5;inset:0;display:flex;align-items:center;justify-content:center;padding:18px;background:linear-gradient(135deg,#08111bd9,#101722b9 56%,#10151ce8);backdrop-filter:blur(7px);overflow:auto}.hidden{display:none!important}.panel{width:min(100%,520px);max-height:calc(100dvh - 36px);overflow:auto;border:1px solid #ffffff24;border-radius:24px;padding:22px;background:linear-gradient(145deg,#202d3beF,#131d28f5);box-shadow:0 24px 90px #0008}.eyebrow{font-size:10px;font-weight:950;letter-spacing:.2em;color:var(--green);margin-bottom:9px}.title{font-size:clamp(28px,8vw,43px);line-height:.99;letter-spacing:-.055em;font-weight:1000;margin:0 0 12px}.title em{font-style:normal;color:var(--green)}.copy{color:#aebdca;font-size:13px;line-height:1.55;margin:0 0 17px}.pillrow{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0 18px}.pill{font-size:10px;font-weight:850;letter-spacing:.06em;color:#c0ced8;border:1px solid #ffffff20;border-radius:99px;padding:7px 10px;background:#ffffff08}.btnrow{display:flex;gap:9px;flex-wrap:wrap}.btn{border-radius:14px;padding:13px 16px;background:var(--green);color:#07140c;font-weight:950;flex:1;min-width:130px;box-shadow:0 7px 0 #32975842}.btn.secondary{background:#273746;color:#f1f7fb;border:1px solid #ffffff1b;box-shadow:none}.btn.danger{background:#48252b;color:#ffb3b5;box-shadow:none}.smallnote{color:#7f93a4;font-size:10px;line-height:1.5;margin-top:14px}.status{font-size:12px;color:#b9c7d3;margin:11px 0 0;min-height:18px}.filebox{border:1px dashed #89eaa65d;background:#7ff2a40a;border-radius:16px;padding:14px;margin:12px 0}.filebox label{display:flex;justify-content:center;align-items:center;gap:9px;border-radius:12px;padding:13px;background:#293b48;font-weight:900;font-size:12px;cursor:pointer}.filebox input{position:absolute;width:1px;height:1px;opacity:0}.modegrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:14px 0}.mode{background:#1b2936;border:1px solid #ffffff1b;border-radius:15px;padding:13px;text-align:left;min-height:90px}.mode b{display:block;font-size:13px;margin-bottom:5px}.mode span{display:block;color:#9eb1bf;font-size:10px;line-height:1.45}.mode.active{border-color:var(--green);background:#163329}.garagebar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:15px 0}.select{width:100%;background:#172633;border:1px solid #ffffff23;border-radius:12px;padding:12px;color:white}.warning{font-size:10px;color:#f5d998;line-height:1.5;padding:10px 12px;background:#f4ca6b0c;border:1px solid #f4ca6b27;border-radius:12px;margin-top:12px}.toast{position:absolute;z-index:9;top:16%;left:50%;transform:translateX(-50%);border-radius:13px;padding:12px 16px;max-width:90%;background:#101a26ec;border:1px solid #ffffff30;font-size:12px;font-weight:800;text-align:center;box-shadow:0 10px 35px #0005;pointer-events:none}.hudbottom{position:absolute;z-index:4;display:none;left:14px;right:14px;bottom:calc(12px + env(safe-area-inset-bottom));align-items:end;justify-content:space-between;gap:12px}.steering{display:flex;gap:9px}.control{width:clamp(55px,15vw,78px);height:clamp(55px,15vw,78px);border-radius:21px;background:#101a26be;border:1px solid #ffffff33;box-shadow:inset 0 1px #ffffff20;display:grid;place-items:center;font-size:26px;font-weight:900;user-select:none;touch-action:none;backdrop-filter:blur(8px)}.control:active,.control.down{background:#7ff2a442;border-color:var(--green)}.pedals{display:flex;gap:8px;align-items:end}.pedal{width:clamp(61px,16vw,82px);height:clamp(66px,18vw,92px);font-size:12px;line-height:1.1;font-weight:950}.pedal.gas{background:#7ff2a4d9;color:#09150d}.pedal.brake{background:#ff7777c9;color:#210e11}.steerlabel{font-size:8px;letter-spacing:.1em;color:#c3d0da;text-align:center;margin-top:5px;font-weight:900}.rightcontrols{display:flex;flex-direction:column;align-items:center;gap:6px}.mini{padding:9px 10px;font-size:10px;border-radius:11px;min-width:60px}.gear{font-size:10px;color:#becbd5;font-weight:900}.meter{width:92px;height:92px;border-radius:50%;border:5px solid #ffffff22;background:#101a26dc;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 9px 25px #0003}.meter strong{font-size:25px;line-height:1}.meter span{font-size:8px;letter-spacing:.2em;color:#a9bac7;margin-top:5px;font-weight:900}.rightHud{display:flex;flex-direction:column;align-items:end;gap:6px}.landscapehint{display:none;position:absolute;z-index:10;inset:0;background:#0f151d;color:white;align-items:center;justify-content:center;text-align:center;padding:35px;font-size:14px;line-height:1.6}@media(max-width:620px) and (orientation:portrait){.landscapehint{display:flex}.topbar{top:calc(5px + env(safe-area-inset-top))}.brand{font-size:10px}.hud{top:49px}.hudcard{min-width:60px;padding:7px 9px}.hudvalue{font-size:17px}.panel{padding:18px;border-radius:20px}.modegrid{gap:7px}.mode{min-height:80px;padding:10px}.btn{padding:12px 11px}.hudbottom{bottom:calc(9px + env(safe-area-inset-bottom))}}@media(min-width:800px){.hudbottom{left:26px;right:26px;bottom:22px}.topbar{left:24px;right:24px;top:20px}.hud{left:24px;top:66px}.panel{width:520px}}
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="gameCanvas"></canvas><div id="shade"></div></div>
+<div class="topbar"><div class="brand">DRIVING <span>WEB PORT</span> <small style="color:#7f93a4;letter-spacing:.08em">V1</small></div><div class="top-actions"><button class="iconbtn" id="soundBtn">SOUND ON</button><button class="iconbtn" id="fullBtn">⛶ FULL</button></div></div>
+<div class="hud" id="hud">
+ <div class="hudcard"><span class="hudlabel">SPEED</span><span class="hudvalue" id="speedVal">0 <small>KM/H</small></span></div>
+ <div class="hudcard"><span class="hudlabel">DISTANCE</span><span class="hudvalue" id="distanceVal">0 <small>M</small></span></div>
+ <div class="hudcard"><span class="hudlabel" id="missionLabel">FREE DRIVE</span><span class="hudvalue" id="missionVal">OPEN ROAD</span><div class="missionprogress"><span id="progressBar"></span></div></div>
+</div>
+<div class="hudbottom" id="hudbottom">
+ <div><div class="steering"><div><button class="control" id="leftBtn" aria-label="Steer left">◀</button><div class="steerlabel">LEFT</div></div><div><button class="control" id="rightBtn" aria-label="Steer right">▶</button><div class="steerlabel">RIGHT</div></div></div></div>
+ <div class="rightHud"><div class="meter"><strong id="meterSpeed">0</strong><span>KM/H</span></div><div class="gear" id="gearLabel">D · DRIVE</div><div class="pedals"><button class="control pedal brake" id="brakeBtn">BRAKE</button><button class="control pedal gas" id="gasBtn">ACCEL<br>▲</button></div></div>
+</div>
+<div class="landscapehint">↻<br><b>Rotate your phone sideways</b><br>V1 is built for landscape driving.</div>
+<div class="toast hidden" id="toast"></div>
+<div class="overlay" id="importScreen">
+ <div class="panel">
+  <div class="eyebrow">V1 · LOCAL ASSET IMPORT</div>
+  <h1 class="title">YOUR CARS.<br><em>YOUR ROAD.</em></h1>
+  <p class="copy">This browser remake reads the 3D models, textures, road assets and sounds from your game archive on your device. Import it once, then the website remembers it in this browser.</p>
+  <div class="pillrow"><span class="pill">3D CAR MODELS</span><span class="pill">TOUCH CONTROLS</span><span class="pill">TRAFFIC</span><span class="pill">MISSIONS</span></div>
+  <div class="filebox"><label for="zipInput">📦 SELECT game.zip / original APK <input id="zipInput" type="file" accept=".zip,.apk,application/zip,application/vnd.android.package-archive"></label><div class="status" id="importStatus">Choose the ZIP you uploaded earlier. It should contain an assets/cars folder.</div></div>
+  <div class="btnrow"><button class="btn secondary" id="restoreBtn">USE SAVED ARCHIVE</button><button class="btn" id="demoBtn">TRY DEMO</button></div>
+  <p class="smallnote">Privacy: the archive is processed in your browser and stored only in this browser's IndexedDB. It is not uploaded to this site. Demo mode runs with generated fallback cars if you do not have the archive handy.</p>
+ </div>
+</div>
+<div class="overlay hidden" id="menuScreen">
+ <div class="panel">
+  <div class="eyebrow" id="menuEyebrow">DRIVING SIMULATOR · V1</div>
+  <h2 class="title">READY TO<br><em>DRIVE?</em></h2>
+  <p class="copy" id="assetStatus">Road systems initialised. Choose a mode and roll out.</p>
+  <div class="modegrid">
+   <button class="mode active" data-mode="free"><b>🚘 Free Drive</b><span>Open road, traffic, no timer.</span></button>
+   <button class="mode" data-mode="highway"><b>🏁 Highway Run</b><span>Cover 1,200 m before time runs out.</span></button>
+   <button class="mode" data-mode="parking"><b>🅿 Parking</b><span>Reach the marked bay and stop cleanly.</span></button>
+   <button class="mode" data-mode="fuel"><b>⛽ Fuel Saver</b><span>Drive 800 m and avoid crashes.</span></button>
+  </div>
+  <div class="btnrow"><button class="btn secondary" id="garageBtn">GARAGE · <span id="carLabel">CAR 01</span></button><button class="btn" id="startBtn">START DRIVE →</button></div>
+  <p class="smallnote">V1 is a browser recreation, not the original Android executable. The original .dex bytecode is Android-only; this build recreates driving behaviour and uses the compatible assets from your archive.</p>
+ </div>
+</div>
+<div class="overlay hidden" id="garageScreen">
+ <div class="panel">
+  <div class="eyebrow">GARAGE · ORIGINAL MODEL FILES</div><h2 class="title">PICK YOUR<br><em>RIDE.</em></h2>
+  <p class="copy">Available cars are discovered from the imported archive. Choose a model to preview it before driving.</p>
+  <div class="garagebar"><button class="iconbtn" id="carPrev">← PREV</button><div style="text-align:center;flex:1"><b id="garageName">CAR 01</b><div class="smallnote" id="garageInfo">Model loading</div></div><button class="iconbtn" id="carNext">NEXT →</button></div>
+  <select class="select" id="carSelect" aria-label="Select car"></select>
+  <div class="btnrow" style="margin-top:14px"><button class="btn secondary" id="garageBack">BACK</button><button class="btn" id="garageUse">USE THIS CAR ✓</button></div>
+ </div>
+</div>
+<div class="overlay hidden" id="pauseScreen">
+ <div class="panel"><div class="eyebrow">PAUSED</div><h2 class="title">TAKE A<br><em>BREATHER.</em></h2><p class="copy">Your drive is paused. Resume, restart the mission or head back to the garage.</p><div class="btnrow"><button class="btn secondary" id="resumeBtn">RESUME</button><button class="btn" id="restartBtn">RESTART</button></div><div class="btnrow" style="margin-top:9px"><button class="btn secondary" id="pauseGarageBtn">GARAGE</button><button class="btn danger" id="exitBtn">EXIT TO MENU</button></div></div>
+</div>
+<div class="overlay hidden" id="resultScreen">
+ <div class="panel"><div class="eyebrow" id="resultEyebrow">MISSION RESULT</div><h2 class="title" id="resultTitle">NICE<br><em>DRIVING.</em></h2><p class="copy" id="resultText">Mission complete.</p><div class="pillrow"><span class="pill" id="resultDistance">DISTANCE · 0 M</span><span class="pill" id="resultSpeed">TOP SPEED · 0 KM/H</span><span class="pill" id="resultHits">CRASHES · 0</span></div><div class="btnrow"><button class="btn secondary" id="resultMenu">MENU</button><button class="btn" id="resultAgain">DRIVE AGAIN →</button></div></div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const screens=['importScreen','menuScreen','garageScreen','pauseScreen','resultScreen'];
+let zip=null,archiveBlob=null,usingArchive=false,demoMode=false;
+let renderer,scene,camera,clock;
+let worldGroup,roadGroup,buildings=[],traffic=[],carRoot,carModel,carTextureCache={},soundUrls={},sounds={};
+let activeCar=0,garageCar=0,selectedMode='free',gameActive=false,paused=false,muted=false;
+let speed=0,topSpeed=0,distance=0,fuel=100,hitCount=0,elapsed=0,startZ=0,playerX=0,carZ=0,steer=0;
+let controls={left:false,right:false,gas:false,brake:false};
+let parkingTarget=null,toastTimer=null,trafficModels=[],lastCrash=0,accelAudio=null;
+const modeNames={free:'FREE DRIVE',highway:'HIGHWAY RUN',parking:'PARKING MISSION',fuel:'FUEL SAVER'};
+const modeGoals={free:0,highway:1200,parking:260,fuel:800};
+function show(id){screens.forEach(s=>$(s).classList.toggle('hidden',s!==id));}
+function toast(text){const t=$('toast');t.textContent=text;t.classList.remove('hidden');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.add('hidden'),2300);}
+function status(text){$('importStatus').textContent=text;}
+function pad(n){return String(n).padStart(2,'0');}
+function showMenu(){show('menuScreen');$('hud').style.display='none';$('hudbottom').style.display='none';gameActive=false;paused=false; $('assetStatus').textContent=usingArchive?'Loaded original car, traffic, road and sound assets from your local archive.':'Demo mode: generated cars and city road are active.';$('menuEyebrow').textContent=usingArchive?'ASSETS IMPORTED · DRIVING SIMULATOR':'DEMO MODE · DRIVING SIMULATOR';}
+function openDb(){return new Promise((resolve,reject)=>{const req=indexedDB.open('dr-driving-web-v1',1);req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains('archive'))db.createObjectStore('archive')};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});}
+async function saveArchive(blob){try{const db=await openDb();await new Promise((resolve,reject)=>{const tx=db.transaction('archive','readwrite');tx.objectStore('archive').put(blob,'gamezip');tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});db.close();}catch(e){console.warn('Archive could not be cached',e);}}
+async function readArchive(){const db=await openDb();const out=await new Promise((resolve,reject)=>{const tx=db.transaction('archive','readonly');const req=tx.objectStore('archive').get('gamezip');req.onsuccess=()=>resolve(req.result||null);req.onerror=()=>reject(req.error);});db.close();return out;}
+async function importArchive(blob,save){
+ if(!window.JSZip){throw new Error('The ZIP library did not load. Check your connection and refresh.');}
+ status('Reading archive…');$('restoreBtn').disabled=true;
+ const loaded=await JSZip.loadAsync(blob,{checkCRC32:false});
+ if(!loaded.file('assets/cars/car00.obj')&&!loaded.file('assets/cars/car00.png')){
+   const nested=Object.keys(loaded.files).find(n=>/\.apk$/i.test(n));
+   throw new Error(nested?'This ZIP contains a nested APK. Unzip the APK itself and select its contents ZIP.':'I could not find assets/cars/car00.obj. Choose the game archive that contains the assets folder.');
+ }
+ zip=loaded;archiveBlob=blob;usingArchive=true;demoMode=false;
+ if(save)await saveArchive(blob);
+ status('Archive ready. Preparing 3D scene…');
+ await prepareWorld();
+ await loadCar(activeCar,true);
+ buildTraffic();
+ populateGarage();
+ $('carLabel').textContent='CAR '+pad(activeCar+1);
+ showMenu();toast('Original game assets loaded locally ✓');
+}
+$('zipInput').addEventListener('change',async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;try{status('Importing '+f.name+' ('+(f.size/1048576).toFixed(1)+' MB)…');await importArchive(f,true);}catch(err){console.error(err);status(err.message||'Import failed.');toast('Import failed: '+(err.message||'unknown error'));}finally{$('restoreBtn').disabled=false;e.target.value='';}});
+$('restoreBtn').addEventListener('click',async()=>{try{const f=await readArchive();if(!f){status('No archive is saved in this browser yet. Choose the ZIP above.');return;}status('Restoring saved archive…');await importArchive(f,false);}catch(e){status(e.message||'Could not restore the saved archive.');}});
+function makeRenderer(){if(renderer)return;renderer=new THREE.WebGLRenderer({canvas:$('gameCanvas'),antialias:false,alpha:false,powerPreference:'low-power'});renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.4));renderer.setSize(window.innerWidth,window.innerHeight);renderer.outputEncoding=THREE.sRGBEncoding;renderer.shadowMap.enabled=false;scene=new THREE.Scene();scene.background=new THREE.Color(0x91c3e5);camera=new THREE.PerspectiveCamera(60,window.innerWidth/window.innerHeight,.1,1800);camera.position.set(0,7,17);clock=new THREE.Clock();window.addEventListener('resize',resize);animate();}
+function resize(){if(!renderer)return;renderer.setSize(window.innerWidth,window.innerHeight);camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();}
+function mat(color,rough){return new THREE.MeshStandardMaterial({color:color,roughness:rough===undefined?.88:rough,metalness:.03});}
+function box(w,h,d,material,x,y,z,group){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);m.position.set(x,y,z);(group||worldGroup).add(m);return m;}
+function plane(w,h,material,x,y,z,rx){const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),material);m.rotation.x=rx===undefined?-Math.PI/2:rx;m.position.set(x,y,z);worldGroup.add(m);return m;}
+function roadDash(x,z,w,len,color){return box(w,.025,len,mat(color,.95),x,.03,z,roadGroup);}
+function buildingTexture(seed){const c=document.createElement('canvas');c.width=128;c.height=256;const x=c.getContext('2d');const base=['#7b8791','#9b8d7e','#667d84','#8f9398','#777b87'][seed%5];x.fillStyle=base;x.fillRect(0,0,c.width,c.height);x.fillStyle='#444e59';x.fillRect(4,4,120,248);for(let r=0;r<8;r++){for(let col=0;col<4;col++){x.fillStyle=(r+col+seed)%4===0?'#ffdba0':'#8ab4c7';x.fillRect(10+col*29,12+r*29,17,19);x.fillStyle='#ffffff20';x.fillRect(10+col*29,12+r*29,17,2);}}x.fillStyle='#c1c9cc';x.fillRect(0,0,128,7);return new THREE.CanvasTexture(c);}
+function makeBuildingMaterial(i){return new THREE.MeshStandardMaterial({map:buildingTexture(i),roughness:.95});}
+function generatedCar(color){const g=new THREE.Group();const paint=mat(color,.36),glass=new THREE.MeshStandardMaterial({color:0x263640,roughness:.22,metalness:.12}),rubber=mat(0x171a1d,.97),rim=mat(0xaab6bb,.35);box(1.95,.55,4,paint,0,.72,0,g);box(1.68,.62,1.8,paint,0,1.25,-.1,g);const win=box(1.52,.42,1.42,glass,0,1.36,-.1,g);win.rotation.x=-.08;for(const sx of [-1,1])for(const z of [-1.25,1.25]){const w=new THREE.Mesh(new THREE.CylinderGeometry(.38,.38,.2,12),rubber);w.rotation.z=Math.PI/2;w.position.set(sx*1.02,.4,z);g.add(w);const r=new THREE.Mesh(new THREE.CylinderGeometry(.2,.2,.205,12),rim);r.rotation.z=Math.PI/2;r.position.copy(w.position);g.add(r);}return g;}
+async function getText(path){if(!zip)return null;const f=zip.file(path);return f?await f.async('text'):null;}
+async function getTexture(path){if(carTextureCache[path])return carTextureCache[path];if(!zip||!zip.file(path))return null;const blob=await zip.file(path).async('blob');const url=URL.createObjectURL(blob);const texture=await new Promise((resolve,reject)=>new THREE.TextureLoader().load(url,t=>resolve(t),undefined,reject));texture.encoding=THREE.sRGBEncoding;texture.anisotropy=1;URL.revokeObjectURL(url);carTextureCache[path]=texture;return texture;}
+async function parseObj(path,texturePath,color){
+ const text=await getText(path);if(!text)return null;const obj=new THREE.OBJLoader().parse(text);let meshes=0;
+ let texture=null;if(texturePath)try{texture=await getTexture(texturePath);}catch(e){console.warn('Texture unavailable',texturePath,e);}
+ obj.traverse(n=>{if(n.isMesh){meshes++;n.geometry.computeVertexNormals();n.material=new THREE.MeshStandardMaterial({map:texture||null,color:texture?0xffffff:(color||0x6c8797),roughness:.62,metalness:.04,side:THREE.DoubleSide});n.castShadow=false;n.receiveShadow=false;}});
+ obj.userData.meshCount=meshes;return obj;
+}
+function disposeTree(obj){if(!obj)return;obj.traverse(n=>{if(n.geometry)n.geometry.dispose();if(n.material){const ms=Array.isArray(n.material)?n.material:[n.material];ms.forEach(m=>{if(m.map===undefined&&m.dispose)m.dispose();else if(m.dispose)m.dispose();});}});}
+async function loadCar(id,forPreview){
+ activeCar=Math.max(0,Math.min(27,Number(id)||0));let obj=null;
+ if(usingArchive){obj=await parseObj('assets/cars/car'+pad(activeCar)+'.obj','assets/cars/car'+pad(activeCar)+'.png',0x526b7a);}
+ if(!obj)obj=generatedCar([0xe35d45,0xd8dce0,0x2a91c5,0xf0bf4a,0x424a55,0x50ad83][activeCar%6]);
+ if(carModel){if(carRoot)carRoot.remove(carModel);disposeTree(carModel);}
+ carModel=obj;carModel.rotation.y=Math.PI;
+ if(!carRoot){carRoot=new THREE.Group();worldGroup.add(carRoot);}
+ carRoot.add(carModel);carModel.position.set(0,0,0);carRoot.position.set(playerX,.06,carZ);
+ $('carLabel').textContent='CAR '+pad(activeCar+1);$('garageName').textContent='CAR '+pad(activeCar+1);$('garageInfo').textContent=usingArchive?'Original model · '+(obj.userData.meshCount||'3D')+' mesh parts':'Generated fallback model';
+ if(forPreview){carRoot.position.set(0,.05,2);carRoot.rotation.y=0;}
+}
+function clearWorld(){if(worldGroup){scene.remove(worldGroup);worldGroup.traverse(n=>{if(n.geometry)n.geometry.dispose();});}worldGroup=new THREE.Group();scene.add(worldGroup);roadGroup=new THREE.Group();worldGroup.add(roadGroup);buildings=[];traffic=[];trafficModels=[];carRoot=null;carModel=null;}
+async function prepareWorld(){
+ makeRenderer();clearWorld();speed=0;distance=0;playerX=0;carZ=0;startZ=0;fuel=100;
+ const sky=usingArchive?await getTexture('assets/envi/sky.jpg').catch(()=>null):null;if(sky)scene.background=sky;else scene.background=new THREE.Color(0x8fc3e7);
+ const grass=mat(0x768c70),asphalt=mat(0x343a40,.98),side=mat(0x9ca5a9),line=mat(0xe5e6df,.8),yellow=mat(0xf0c64b,.8);
+ plane(1500,7000,grass,0,-.35,-3250);
+ plane(28,7000,asphalt,0,-.12,-3250);
+ plane(5,7000,side,-16.5,-.10,-3250);plane(5,7000,side,16.5,-.10,-3250);
+ plane(.28,7000,line,-13.9,-.065,-3250);plane(.28,7000,line,13.9,-.065,-3250);
+ for(let z=160;z>-6700;z-=18){roadDash(-4,z,.16,7,0xe9e9e6);roadDash(4,z,.16,7,0xe9e9e6);}
+ for(let z=100;z>-6700;z-=190){
+  const cross=box(135,.035,13,asphalt,0,-.09,z,roadGroup);
+  for(let x=-58;x<=58;x+=7)roadDash(x,z,3.5,.35,0xe1e3df);
+  box(135,.03,.32,yellow,0,-.055,z-6.5,roadGroup);box(135,.03,.32,yellow,0,-.055,z+6.5,roadGroup);
+ }
+ const curb=mat(0xb5b6ae);for(let z=100;z>-6600;z-=50){box(5,.25,22,curb,-19,.1,z,roadGroup);box(5,.25,22,curb,19,.1,z-22,roadGroup);}
+ const bmats=[0,1,2,3,4].map(makeBuildingMaterial);
+ for(let row=0;row<2;row++){const sideSign=row===0?-1:1;for(let z=55;z>-6500;z-=95){const h=12+((Math.abs(Math.floor(z))%7)*4);const w=11+((Math.abs(Math.floor(z/3))%5)*2);const d=18+((Math.abs(Math.floor(z/5))%6)*4);const x=sideSign*(29+w*.5+((Math.abs(Math.floor(z/9))%3)*2));const b=box(w,h,d,bmats[Math.abs(Math.floor(z/7))%bmats.length],x,h/2-.1,z-(Math.abs(Math.floor(z/11))%20),worldGroup);buildings.push(b);}}
+ // Original road/environment mesh is loaded from the supplied archive and placed as city-world dressing.
+ if(usingArchive){try{const env=await parseObj('assets/envi/road_road.obj','assets/envi/road_road.jpg',0x45494c);if(env){env.scale.setScalar(1);env.position.set(180,.01,-430);env.rotation.y=0;worldGroup.add(env);const env2=env.clone();env2.position.set(-180,.01,-850);worldGroup.add(env2);}}catch(e){console.warn('Road mesh skipped',e);}}
+ // Original skyline image makes the distant horizon look closer to the mobile game.
+ const skyline=usingArchive?await getTexture('assets/envi/sky.jpg').catch(()=>null):null;if(skyline){const skyPlane=new THREE.Mesh(new THREE.PlaneGeometry(1400,260),new THREE.MeshBasicMaterial({map:skyline,side:THREE.DoubleSide,depthWrite:false}));skyPlane.position.set(0,84,-1500);worldGroup.add(skyPlane);}
+ if(usingArchive){try{const bg=await getTexture('assets/background.png');if(bg){const bgmat=new THREE.MeshBasicMaterial({map:bg,transparent:true,opacity:.12,depthWrite:false});const b=new THREE.Mesh(new THREE.PlaneGeometry(900,550),bgmat);b.position.set(0,190,-1900);worldGroup.add(b);}}catch(e){}}
+ const ambient=new THREE.HemisphereLight(0xdceeff,0x485448,2.0);scene.add(ambient);const sun=new THREE.DirectionalLight(0xffefcf,2.0);sun.position.set(-20,65,20);scene.add(sun);
+ carRoot=null;carModel=null;
+}
+async function buildTraffic(){
+ traffic.forEach(t=>{if(t.root&&worldGroup)worldGroup.remove(t.root)});traffic=[];
+ for(let i=0;i<8;i++){
+  const lane=i%2===0?-8:8;const z=-65-i*84;
+  let model=null;
+  if(usingArchive){const cid=(i%2===0?1:2);model=await parseObj('assets/cars/car'+pad(cid)+'.obj','assets/cars/car'+pad(cid)+'.png',0x4b879d);}
+  if(!model)model=generatedCar(i%2===0?0x6b92b5:0xe2b85a);
+  const root=new THREE.Group();root.add(model);root.position.set(lane,.05,z);root.rotation.y=i%2===0?0:Math.PI;worldGroup.add(root);
+  traffic.push({root,model,lane,z,speed:8+(i%4)*3,dir:i%3===0?-1:1,hit:false});
+ }
+}
+function populateGarage(){const select=$('carSelect');select.innerHTML='';for(let i=0;i<28;i++){const opt=document.createElement('option');opt.value=String(i);opt.textContent='CAR '+pad(i+1)+(usingArchive?' · ORIGINAL MODEL':' · DEMO');select.appendChild(opt);}select.value=String(activeCar);}
+async function refreshGarageCar(id){garageCar=Math.max(0,Math.min(27,Number(id)||0));$('carSelect').value=String(garageCar);await loadCar(garageCar,true);$('garageName').textContent='CAR '+pad(garageCar+1);$('garageInfo').textContent=usingArchive?'Loaded from assets/cars/car'+pad(garageCar)+'.obj':'Generated fallback preview';}
+$('garageBtn').addEventListener('click',async()=>{garageCar=activeCar;$('carSelect').value=String(garageCar);show('garageScreen');await refreshGarageCar(garageCar);});
+$('carSelect').addEventListener('change',e=>refreshGarageCar(e.target.value));
+$('carPrev').addEventListener('click',()=>refreshGarageCar((garageCar+27)%28));
+$('carNext').addEventListener('click',()=>refreshGarageCar((garageCar+1)%28));
+$('garageBack').addEventListener('click',()=>showMenu());
+$('garageUse').addEventListener('click',async()=>{activeCar=garageCar;await loadCar(activeCar,true);showMenu();toast('CAR '+pad(activeCar+1)+' selected');});
+function addTrafficAudio(){
+ if(!usingArchive||!zip)return;
+ const refs={engine:'assets/sounds/engine6.ogg',brake:'assets/sounds/brake.ogg',horn:'assets/sounds/horn.ogg',crash:'assets/sounds/Crash2.ogg'};
+ Object.keys(refs).forEach(async k=>{try{const f=zip.file(refs[k]);if(!f)return;const blob=await f.async('blob');const url=URL.createObjectURL(blob);soundUrls[k]=url;if(k==='engine'){const a=new Audio(url);a.loop=true;a.volume=.22;sounds.engine=a;}else{sounds[k]=new Audio(url);sounds[k].volume=k==='crash'?.7:.6;}}catch(e){console.warn('Sound missing',k);}});
+}
+function playSound(name){if(muted)return;const a=sounds[name];if(a){try{a.currentTime=0;const p=a.play();if(p&&p.catch)p.catch(()=>{});}catch(e){}}}
+function startEngine(){if(muted)return;const a=sounds.engine;if(a&&!a.paused){return;}if(a){a.volume=.12;const p=a.play();if(p&&p.catch)p.catch(()=>{});}}
+function stopEngine(){const a=sounds.engine;if(a){a.pause();try{a.currentTime=0;}catch(e){}}}
+$('soundBtn').addEventListener('click',()=>{muted=!muted;$('soundBtn').textContent=muted?'SOUND OFF':'SOUND ON';if(muted)stopEngine();else if(gameActive)startEngine();});
+$('fullBtn').addEventListener('click',()=>{const el=document.documentElement;if(!document.fullscreenElement&&el.requestFullscreen)el.requestFullscreen().catch(()=>{});else if(document.exitFullscreen)document.exitFullscreen().catch(()=>{});});
+$('demoBtn').addEventListener('click',async()=>{try{usingArchive=false;demoMode=true;zip=null;await prepareWorld();await loadCar(0,true);await buildTraffic();populateGarage();showMenu();$('assetStatus').textContent='Demo mode active. Import the original archive anytime to use its cars, road assets and sounds.';}catch(e){console.error(e);toast('Could not start demo: '+e.message);}});
+document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>{selectedMode=b.dataset.mode;document.querySelectorAll('[data-mode]').forEach(x=>x.classList.toggle('active',x===b));}));
+function resetDrive(){speed=0;topSpeed=0;distance=0;fuel=100;hitCount=0;elapsed=0;playerX=0;carZ=0;startZ=0;steer=0;lastCrash=0;controls={left:false,right:false,gas:false,brake:false};if(carRoot){carRoot.position.set(0,.06,0);carRoot.rotation.y=0;}traffic.forEach((t,i)=>{t.z=-65-i*84;t.root.position.set(t.lane,.05,t.z);t.hit=false;});parkingTarget=null;if(selectedMode==='parking'){parkingTarget=new THREE.Mesh(new THREE.PlaneGeometry(8,13),new THREE.MeshBasicMaterial({color:0x73f7a0,transparent:true,opacity:.4,side:THREE.DoubleSide}));parkingTarget.rotation.x=-Math.PI/2;parkingTarget.position.set(0,.08,-modeGoals.parking);worldGroup.add(parkingTarget);for(let x=-3.8;x<=3.8;x+=7.6){const edge=box(.18,.04,13,mat(0x75f2a1),x,.1,-modeGoals.parking,worldGroup);}}}
+function startDrive(){show('menuScreen');resetDrive();gameActive=true;paused=false;$('hud').style.display='flex';$('hudbottom').style.display='flex';show('menuScreen');$('menuScreen').classList.add('hidden');startEngine();if(carRoot){carRoot.position.set(playerX,.06,carZ);}clock.getDelta();toast(modeNames[selectedMode]+' STARTED');}
+$('startBtn').addEventListener('click',startDrive);
+function pauseDrive(){if(!gameActive)return;paused=true;gameActive=false;stopEngine();show('pauseScreen');}
+$('resumeBtn').addEventListener('click',()=>{paused=false;gameActive=true;show('menuScreen');$('menuScreen').classList.add('hidden');startEngine();clock.getDelta();});
+$('restartBtn').addEventListener('click',()=>{show('menuScreen');$('menuScreen').classList.add('hidden');startDrive();});
+$('pauseGarageBtn').addEventListener('click',()=>{paused=false;gameActive=false;show('garageScreen');refreshGarageCar(activeCar);});
+$('exitBtn').addEventListener('click',()=>{stopEngine();showMenu();});
+$('resultMenu').addEventListener('click',()=>{stopEngine();showMenu();});
+$('resultAgain').addEventListener('click',()=>{show('menuScreen');$('menuScreen').classList.add('hidden');startDrive();});
+$('stage').addEventListener('dblclick',()=>{if(gameActive)pauseDrive();});
+function finishDrive(success,title,body){gameActive=false;paused=false;stopEngine();show('resultScreen');$('resultEyebrow').textContent=success?'MISSION COMPLETE':'DRIVE ENDED';$('resultTitle').innerHTML=success?'GOOD<br><em>DRIVING.</em>':'TRY AGAIN<br><em>DRIVER.</em>';$('resultText').textContent=body||title;$('resultDistance').textContent='DISTANCE · '+Math.floor(distance)+' M';$('resultSpeed').textContent='TOP SPEED · '+Math.floor(topSpeed)+' KM/H';$('resultHits').textContent='CRASHES · '+hitCount;toast(title);}
+function setControl(n,v){controls[n]=v;const id={left:'leftBtn',right:'rightBtn',gas:'gasBtn',brake:'brakeBtn'}[n];if(id)$(id).classList.toggle('down',v);}
+[['leftBtn','left'],['rightBtn','right'],['gasBtn','gas'],['brakeBtn','brake']].forEach(pair=>{const el=$(pair[0]),n=pair[1];el.addEventListener('pointerdown',e=>{e.preventDefault();setControl(n,true);try{el.setPointerCapture(e.pointerId);}catch(_){} });['pointerup','pointercancel','lostpointercapture','pointerleave'].forEach(ev=>el.addEventListener(ev,e=>{if(ev==='pointerleave'&&e.buttons) return;setControl(n,false);}));});
+$('brakeBtn').addEventListener('click',()=>playSound('brake'));
+window.addEventListener('keydown',e=>{if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();if(e.key==='ArrowLeft'||e.key.toLowerCase()==='a')controls.left=true;if(e.key==='ArrowRight'||e.key.toLowerCase()==='d')controls.right=true;if(e.key==='ArrowUp'||e.key.toLowerCase()==='w')controls.gas=true;if(e.key==='ArrowDown'||e.key.toLowerCase()==='s')controls.brake=true;if(e.key==='Escape'&&gameActive)pauseDrive();if(e.key.toLowerCase()==='h')playSound('horn');});
+window.addEventListener('keyup',e=>{if(e.key==='ArrowLeft'||e.key.toLowerCase()==='a')controls.left=false;if(e.key==='ArrowRight'||e.key.toLowerCase()==='d')controls.right=false;if(e.key==='ArrowUp'||e.key.toLowerCase()==='w')controls.gas=false;if(e.key==='ArrowDown'||e.key.toLowerCase()==='s')controls.brake=false;});
+function updateHud(){ $('speedVal').innerHTML=Math.floor(speed)+' <small>KM/H</small>';$('meterSpeed').textContent=Math.floor(speed);$('distanceVal').innerHTML=Math.floor(distance)+' <small>M</small>';$('missionLabel').textContent=modeNames[selectedMode]||'FREE DRIVE';const goal=modeGoals[selectedMode]||0;if(selectedMode==='parking')$('missionVal').textContent=distance<goal?'BAY '+Math.max(0,Math.round(goal-distance))+' M':'STOP HERE';else if(selectedMode==='highway'||selectedMode==='fuel')$('missionVal').textContent=Math.min(goal,Math.floor(distance))+' / '+goal+' M';else $('missionVal').textContent='OPEN ROAD';$('progressBar').style.width=(goal?Math.min(100,distance/goal*100):Math.min(100,elapsed/60*100))+'%';$('gearLabel').textContent=speed<1?'N · IDLE':controls.brake?'B · BRAKE':'D · DRIVE';}
+function checkCollisions(now){for(const t of traffic){if(t.hit)continue;const dx=Math.abs(playerX-t.root.position.x),dz=Math.abs(carZ-t.root.position.z);if(dx<2.7&&dz<4.1&&speed>8&&now-lastCrash>1.8){t.hit=true;hitCount++;lastCrash=now;speed*=.28;playSound('crash');toast('CRASH! Speed reduced.');setTimeout(()=>{t.hit=false;t.z=carZ-260-Math.random()*220;t.root.position.z=t.z;t.lane=Math.random()>.5?-8:8;t.root.position.x=t.lane;},350);}}}
+function updateTraffic(dt){for(const t of traffic){t.z+=t.dir*t.speed*dt;t.root.position.z=t.z;if(t.z>carZ+75){t.z=carZ-280-Math.random()*360;t.root.position.z=t.z;t.lane=Math.random()>.5?-8:8;t.root.position.x=t.lane;t.dir=Math.random()>.3?1:-1;t.speed=7+Math.random()*11;}if(t.z<carZ-650){t.z=carZ-150-Math.random()*220;t.root.position.z=t.z;}}}
+function updateDrive(dt){
+ if(!gameActive||paused)return;elapsed+=dt;
+ const accel=controls.gas?26:0;speed+=accel*dt;if(controls.brake)speed-=58*dt;else if(!controls.gas)speed-=7*dt;speed=Math.max(0,Math.min(150,speed));topSpeed=Math.max(topSpeed,speed);
+ const steerInput=(controls.right?1:0)-(controls.left?1:0);steer=THREE.MathUtils.damp(steer,steerInput,5,dt);playerX+=steer*(.5+speed*.018)*dt*9;playerX=THREE.MathUtils.clamp(playerX,-12,12);
+ const travel=speed/3.6*dt*.88;carZ-=travel;distance+=travel;fuel=Math.max(0,fuel-travel*(selectedMode==='fuel'?.018:.009));
+ if(carRoot){carRoot.position.set(playerX,.06,carZ);carRoot.rotation.y=Math.PI+steer*.06;carRoot.rotation.z=-steer*Math.min(.09,speed/1000);}
+ if(controls.brake&&speed>12&&Math.random()<.025)playSound('brake');
+ updateTraffic(dt);checkCollisions(elapsed);
+ if(sounds.engine&&!muted){sounds.engine.volume=.08+speed/150*.28;if(sounds.engine.paused)startEngine();}
+ if(selectedMode==='highway'){if(distance>=modeGoals.highway)finishDrive(true,'DISTANCE CLEARED','You covered 1,200 metres before the timer ended.');else if(elapsed>=90)finishDrive(false,'TIME UP','The Highway Run timer hit 90 seconds.');}
+ if(selectedMode==='fuel'){if(fuel<=0)finishDrive(false,'OUT OF FUEL','You ran out of fuel before reaching the destination.');else if(distance>=modeGoals.fuel)finishDrive(true,'FUEL SAVER CLEAR','You completed 800 metres. Final fuel: '+Math.floor(fuel)+'%.');}
+ if(selectedMode==='parking'&&parkingTarget){const delta=Math.abs(carZ+modeGoals.parking);if(delta<6&&Math.abs(playerX)<3.5&&speed<5)finishDrive(true,'PARKED PERFECTLY','You reached the marked parking bay and stopped safely.');else if(carZ< -modeGoals.parking-18)finishDrive(false,'MISSED THE BAY','You drove past the target. Brake earlier and line up with the green marker.');}
+ if(selectedMode==='free'&&distance>=6500){finishDrive(true,'CITY LOOP COMPLETE','You covered 6.5 km. Start another drive to keep exploring.');}
+ updateHud();
+}
+function updateCamera(dt){if(!camera||!carRoot)return;const target=new THREE.Vector3(playerX*.5,3.8,carZ+9.5);camera.position.x=THREE.MathUtils.damp(camera.position.x,target.x,3.5,dt);camera.position.y=THREE.MathUtils.damp(camera.position.y,6.7,2.6,dt);camera.position.z=THREE.MathUtils.damp(camera.position.z,target.z,4.5,dt);camera.lookAt(playerX*.35,1.0,carZ-16);if(!gameActive){carRoot.rotation.y+=dt*.16;}}
+function animate(){requestAnimationFrame(animate);if(!renderer||!scene||!camera)return;const dt=Math.min(clock.getDelta(),.05);updateDrive(dt);updateCamera(dt);renderer.render(scene,camera);}
+async function boot(){try{makeRenderer();await prepareWorld();await loadCar(0,true);await buildTraffic();populateGarage();try{const f=await readArchive();if(f){status('Restoring your saved archive…');await importArchive(f,false);addTrafficAudio();}}catch(e){console.warn('No saved archive',e);}if(!usingArchive){show('importScreen');} }catch(e){console.error(e);status('Your browser could not initialise 3D. Refresh and make sure WebGL is enabled.');}}
+const _oldImport=importArchive;
+importArchive=async function(blob,save){await _oldImport(blob,save);addTrafficAudio();};
+boot();
+})();
+</script>
+</body>
+</html>
