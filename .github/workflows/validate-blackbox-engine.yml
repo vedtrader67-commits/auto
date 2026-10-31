@@ -1,36 +1,63 @@
-name: Validate BlackBox Reborn engine
+name: Build Calculator with BlackBox Reborn
 
 on:
   push:
     branches: [blackbox-reborn-integration]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  build-blackbox-engine:
+  build-calculator-blackbox:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
-      - name: Checkout Calculator project and pinned engine
+      - name: Checkout Calculator and pinned BlackBox Reborn source
         uses: actions/checkout@v4
         with:
           submodules: recursive
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
           cache: gradle
+
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
-      - name: Install Android build tools and NDK
+
+      - name: Install Android SDK and NDK
         run: sdkmanager "platforms;android-36" "build-tools;36.1.0" "ndk;27.0.12077973"
-      - name: Build BlackBox Reborn debug APK
+
+      - name: Integrate Calculator disguise into BlackBox host
+        run: |
+          chmod +x calculator-disguise/scripts/prepare-blackbox.sh
+          calculator-disguise/scripts/prepare-blackbox.sh calculator-disguise/blackbox-engine calculator-disguise
+
+      - name: Build installable Calculator APK
         working-directory: calculator-disguise/blackbox-engine
         run: |
           chmod +x gradlew
-          ./gradlew :app:assembleDebug --no-daemon
-      - name: Upload engine validation APK
+          ./gradlew :app:assembleDebug --no-daemon --stacktrace
+
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: blackbox-reborn-engine-validation
+          name: Calculator-BlackBox-Reborn-Android
           path: calculator-disguise/blackbox-engine/app/build/outputs/apk/debug/*.apk
-          retention-days: 7
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish APK download release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: calculator-blackbox-build-${{ github.run_number }}
+          name: Calculator + BlackBox Reborn build ${{ github.run_number }}
+          body: |
+            Calculator disguise with BlackBox Reborn virtual app engine.
+            Unlock with 6767, then use the BlackBox virtual app manager to install and launch APKs.
+            Built from the pinned engine source on branch blackbox-reborn-integration.
+          prerelease: true
+          files: calculator-disguise/blackbox-engine/app/build/outputs/apk/debug/*.apk
