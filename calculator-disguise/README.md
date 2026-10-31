@@ -1,15 +1,15 @@
-# Calculator
+# APK Customizer
 
-A simple Android calculator for Android 6.0+.
+Android app project for importing an APK, reading its package name and icon, and previewing a custom launcher label.
 
-## Secret shortcut
-Enter **6767** and tap **=** to open the official Instagram app already installed on the phone. Instagram is not included in this APK and is not modified.
+## Current test build
+- Import an APK using Android's document picker.
+- Inspect its embedded app label, package ID and icon.
+- Edit the display name and preview the text change.
+- Original APK is not modified or installed.
 
-## Build APK
-1. Open the repository's **Actions** tab.
-2. Select **Build Calculator APK**.
-3. Tap **Run workflow** (or let a push trigger it).
-4. Open the completed run and download the **Calculator-debug-apk** artifact.
-5. Extract the ZIP and install `app-debug.apk`.
+## Important
+This initial build is an import/preview prototype. It does not yet rewrite APK manifests/resources or sign a modified APK. APKs that use split packages may require a complete split set. Repackaging also changes signing identity and can break updates or app integrity checks.
 
-The app uses a normal launcher label and calculator-style icon. Android Settings can still show its app details. The debug APK is for testing and is not Play Store signed.
+## Build
+GitHub Actions workflow: `.github/workflows/build-calculator-apk.yml`.
