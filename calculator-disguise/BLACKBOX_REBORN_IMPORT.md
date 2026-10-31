@@ -20,3 +20,5 @@ The Calculator project remains the host target. Do not replace it with the stand
 ## Calculator host build
 
 The integration build applies `scripts/prepare-blackbox.sh` to the pinned engine source in CI. It adds the Calculator gate activity and calculator icon/label, launches BlackBox `WelcomeActivity` only after the user enters `6767` and presses `=`, then builds the BlackBox host APK with application ID `com.calculator.simple`. The APK is published as a prerelease asset by the `Build Calculator with BlackBox Reborn` workflow.
+
+Android SDK CI uses the current setup-android action and installs API 36 / NDK 27 for the pinned build.
