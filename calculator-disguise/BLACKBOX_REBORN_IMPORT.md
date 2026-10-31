@@ -15,3 +15,8 @@ This branch replaces the incorrect VirtualXposed experiment with the selected Bl
 The engine is pinned as a Git submodule for reproducible builds. This is not yet a finished Calculator-hosted virtual environment. BlackBox is a framework with a required Application bootstrap, manifest-declared proxy components, native libraries, and lifecycle wiring. Simply adding Bcore as a dependency would not make APK installation or guest launching work. The Calculator app still needs that host integration and an Android 12 device test.
 
 The Calculator project remains the host target. Do not replace it with the standalone BlackBox launcher or claim guest apps run until the complete integration is built and tested.
+
+
+## Calculator host build
+
+The integration build applies `scripts/prepare-blackbox.sh` to the pinned engine source in CI. It adds the Calculator gate activity and calculator icon/label, launches BlackBox `WelcomeActivity` only after the user enters `6767` and presses `=`, then builds the BlackBox host APK with application ID `com.calculator.simple`. The APK is published as a prerelease asset by the `Build Calculator with BlackBox Reborn` workflow.
