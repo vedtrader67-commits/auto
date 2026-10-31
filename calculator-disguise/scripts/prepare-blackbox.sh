@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ENGINE_DIR="\${1:?BlackBox engine directory required}"
-PROJECT_DIR="\${2:?Calculator project directory required}"
+ENGINE_DIR="${1:?BlackBox engine directory required}"
+PROJECT_DIR="${2:?Calculator project directory required}"
 
 python3 - "$ENGINE_DIR" "$PROJECT_DIR" <<'PY'
 from pathlib import Path
