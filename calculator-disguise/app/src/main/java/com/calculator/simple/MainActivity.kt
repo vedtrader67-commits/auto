@@ -90,7 +90,7 @@ class MainActivity : Activity() {
             setHintTextColor(Color.GRAY)
             setTextColor(Color.WHITE)
             textSize = 17f
-            singleLine = true
+            setSingleLine(true)
             setPadding(dp(14), dp(12), dp(14), dp(12))
             setBackgroundColor(Color.rgb(31, 38, 55))
             isEnabled = false
