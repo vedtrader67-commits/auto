@@ -1,13 +1,15 @@
-# Calculator Disguise Android App
+# Calculator
 
-Project workspace for a calculator-style Android app that can open the user's already-installed official Instagram app after the configured secret action.
+A simple Android calculator for Android 6.0+.
 
-## Current configuration
-- App label: Calculator
-- Launcher icon: Calculator-style icon (to be added)
-- Secret code: 6767, followed by `=`
-- Target device: vivo Y21, Android 12
-- Instagram: launches the official installed app; this project does not bundle or modify Instagram.
+## Secret shortcut
+Enter **6767** and tap **=** to open the official Instagram app already installed on the phone. Instagram is not included in this APK and is not modified.
 
-## Build status
-Workspace created. Android project files and GitHub Actions APK build workflow are next.
+## Build APK
+1. Open the repository's **Actions** tab.
+2. Select **Build Calculator APK**.
+3. Tap **Run workflow** (or let a push trigger it).
+4. Open the completed run and download the **Calculator-debug-apk** artifact.
+5. Extract the ZIP and install `app-debug.apk`.
+
+The app uses a normal launcher label and calculator-style icon. Android Settings can still show its app details. The debug APK is for testing and is not Play Store signed.
