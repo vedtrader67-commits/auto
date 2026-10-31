@@ -1,0 +1,3 @@
+[submodule "calculator-disguise/virtualxposed-engine"]
+	path = calculator-disguise/virtualxposed-engine
+	url = https://github.com/imsourcandy/VirtualXposed_12.git
