@@ -143,7 +143,10 @@ class MainActivity : Activity() {
         val uri = data?.data ?: return
         try {
             val readFlag = data.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION
-            if (readFlag != 0) contentResolver.takePersistableUriPermission(uri, readFlag)
+            val persistableFlag = data.flags and Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+            if (readFlag != 0 && persistableFlag != 0) {
+                contentResolver.takePersistableUriPermission(uri, readFlag)
+            }
             when (requestCode) {
                 41 -> importApk(uri)
                 42 -> {
