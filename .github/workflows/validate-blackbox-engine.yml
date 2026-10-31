@@ -25,11 +25,13 @@ jobs:
           java-version: '17'
           cache: gradle
 
-      - name: Install Android SDK and NDK
-        run: |
-          yes | sdkmanager --licenses
-          sdkmanager --install "platforms;android-36" "build-tools;36.1.0" "ndk;27.0.12077973"
+      - name: Set up Android SDK command-line tools
+        uses: android-actions/setup-android@v4
+        with:
+          packages: ''
 
+      - name: Install Android platform, build tools and NDK
+        run: sdkmanager --install "platforms;android-36" "build-tools;36.1.0" "ndk;27.0.12077973"
       - name: Integrate Calculator disguise into BlackBox host
         run: |
           chmod +x calculator-disguise/scripts/prepare-blackbox.sh
