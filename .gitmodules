@@ -1,0 +1,3 @@
+[submodule "calculator-disguise/blackbox-engine"]
+	path = calculator-disguise/blackbox-engine
+	url = https://github.com/fdavids77/BlackBoxReborn.git
