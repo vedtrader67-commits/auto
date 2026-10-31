@@ -1,4 +1,4 @@
-name: Build Calculator APK
+name: Build APK Customizer
 
 on:
   push:
@@ -16,24 +16,20 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Set up Java 17
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
-
       - name: Set up Gradle 8.9
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
-
       - name: Locate Android SDK tools
         run: |
           echo "ANDROID_HOME=$ANDROID_HOME"
           ls -la "$ANDROID_HOME"
           find "$ANDROID_HOME" -type f -name sdkmanager -print
-
       - name: Accept Android SDK licences and install platform
         run: |
           SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
@@ -43,14 +39,12 @@ jobs:
           test -n "$SDKMANAGER"
           yes | "$SDKMANAGER" --licenses || true
           "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0"
-
       - name: Build debug APK
         working-directory: calculator-disguise
         run: gradle assembleDebug --stacktrace
-
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Calculator-debug-apk
+          name: APK-Customizer-debug
           path: calculator-disguise/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
