@@ -218,6 +218,7 @@ install_function = r'''    fun installApk(source: String, userId: Int, resultLiv
             stagedApk?.let {
                 try {
                     if (it.exists()) it.delete()
+                    Unit
                 } catch (e: Exception) {
                     Log.w(TAG, "Could not remove temporary imported APK: " + e.message)
                 }
