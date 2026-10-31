@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   build-calculator-blackbox:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
       - name: Checkout Calculator and pinned BlackBox Reborn source
@@ -25,11 +25,10 @@ jobs:
           java-version: '17'
           cache: gradle
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Install Android SDK and NDK
-        run: sdkmanager "platforms;android-36" "build-tools;36.1.0" "ndk;27.0.12077973"
+        run: |
+          yes | sdkmanager --licenses
+          sdkmanager --install "platforms;android-36" "build-tools;36.1.0" "ndk;27.0.12077973"
 
       - name: Integrate Calculator disguise into BlackBox host
         run: |
