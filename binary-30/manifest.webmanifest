@@ -1,0 +1,12 @@
+{
+  "name":"BINARY 30 · Offline Trade Journal",
+  "short_name":"BINARY 30",
+  "description":"Private offline-first binary trade journal with encrypted portable backups.",
+  "start_url":"./index.html",
+  "scope":"./",
+  "display":"standalone",
+  "orientation":"portrait-primary",
+  "background_color":"#07110f",
+  "theme_color":"#07110f",
+  "icons":[{"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
