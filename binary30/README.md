@@ -1,0 +1,1 @@
+# BINARY 30\n\nOffline-first binary options journal. Manual entries only, local browser storage, per-trade stake and payout, 30-day tracking, optional PIN convenience lock, and JSON backup/restore.\n\nThis is a journal only. It does not connect to a broker or execute trades. Binary options are high risk.
