@@ -24,6 +24,7 @@ public class MainActivity extends ComponentActivity {
     private WebView webView;
     private ValueCallback<Uri[]> fileCallback;
     private String pendingBackup = "BINARY30-BACKUP.json";
+    private String pendingBackupContent = "";
     private final ActivityResultLauncher<Intent> createBackup = registerForActivityResult(
         new ActivityResultContracts.StartActivityForResult(), result -> {
             if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
@@ -37,7 +38,6 @@ public class MainActivity extends ComponentActivity {
                 }
             }
         });
-    private String pendingBackupContent = "";
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
