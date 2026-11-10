@@ -1,6 +1,8 @@
 package com.locora.app
 
 import android.content.Context
+import android.widget.Toast
+import androidx.biometric.BiometricManager
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -101,6 +103,7 @@ fun SettingsScreen(
     val battery = remember(refreshBattery) { LocalStore.battery(context) }
     var notifierUrl by remember { mutableStateOf(CloudRepository.pushServerUrl(context)) }
     var notifierStatus by remember { mutableStateOf("") }
+    var biometricEnabled by remember { mutableStateOf(LocalStore.biometricEnabled(context)) }
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
@@ -136,6 +139,23 @@ fun SettingsScreen(
             Text("Open Usage Access settings")
         }
         InfoCard("Chat lock", "A four-digit PIN protects chat on this device. The PIN is stored as a salted PBKDF2 hash.")
+        Surface(color = ActivityPanel, shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
+            Row(Modifier.padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Fingerprint unlock", color = Color.White, fontWeight = FontWeight.SemiBold)
+                    Text("Optional biometric access after you create your chat PIN.", color = ActivityMuted, fontSize = 10.sp)
+                }
+                Switch(checked = biometricEnabled, onCheckedChange = { enabled ->
+                    val canUse = BiometricManager.from(context).canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) == BiometricManager.BIOMETRIC_SUCCESS
+                    if (enabled && !canUse) {
+                        Toast.makeText(context, "Set up a fingerprint in Android Settings first.", Toast.LENGTH_LONG).show()
+                    } else {
+                        biometricEnabled = enabled
+                        LocalStore.setBiometricEnabled(context, enabled)
+                    }
+                })
+            }
+        }
         Text("MISSING YOU PUSH SERVICE", color = ActivityPink, fontWeight = FontWeight.Bold, fontSize = 11.sp)
         Surface(color = ActivityPanel, shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
