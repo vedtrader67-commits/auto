@@ -143,8 +143,11 @@ class MainActivity : FragmentActivity() {
 
     override fun onResume() {
         super.onResume()
+        val prefs = getSharedPreferences("locora_local", Context.MODE_PRIVATE)
         if (Build.VERSION.SDK_INT >= 33 &&
-            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED &&
+            !prefs.getBoolean("notification_permission_prompted", false)) {
+            prefs.edit().putBoolean("notification_permission_prompted", true).apply()
             notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
         if (::fused.isInitialized && hasLocationPermission()) refreshLocation()
