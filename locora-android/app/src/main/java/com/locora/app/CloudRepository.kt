@@ -150,7 +150,7 @@ object CloudRepository {
                 override fun doTransaction(currentData: MutableData): Transaction.Result {
                     val used = currentData.child("usedBy").getValue(String::class.java).orEmpty()
                     val expiryNow = currentData.child("expiresAt").getValue(Long::class.java) ?: 0L
-                    if (!currentData.exists() || used.isNotBlank() || expiryNow < System.currentTimeMillis()) {
+                    if (currentData.value == null || used.isNotBlank() || expiryNow < System.currentTimeMillis()) {
                         return Transaction.abort()
                     }
                     currentData.child("usedBy").value = uid
