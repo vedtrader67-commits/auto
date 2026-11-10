@@ -8,6 +8,7 @@ import android.net.Uri
 import java.io.ByteArrayOutputStream
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
+import com.google.android.gms.tasks.Tasks
 import java.security.SecureRandom
 
 data class CloudMessage(
@@ -182,8 +183,23 @@ object CloudRepository {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(PAIR_KEY, pairId).apply()
     }
 
-    fun leavePair(context: Context) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(PAIR_KEY).apply()
+    fun leavePair(context: Context, done: () -> Unit = {}) {
+        val pairId = currentPairId(context)
+        val uid = currentUid()
+        if (pairId.isBlank() || uid == null) {
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(PAIR_KEY).apply()
+            done()
+            return
+        }
+        val pair = root(context).child("pairs").child(pairId)
+        val userNodes = listOf("locations", "presence", "battery", "activity", "activityConsent", "locationConsent", "typing")
+        val tasks = userNodes.map { pair.child(it).child(uid).removeValue() }
+        Tasks.whenAllComplete(tasks).addOnCompleteListener {
+            pair.child("members").child(uid).removeValue().addOnCompleteListener {
+                context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(PAIR_KEY).apply()
+                done()
+            }
+        }
     }
 
     fun setPresence(context: Context, pairId: String) {
