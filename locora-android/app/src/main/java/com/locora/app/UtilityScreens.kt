@@ -166,12 +166,12 @@ fun SettingsScreen(
         }
         Text("CHAT BACKUP", color = ActivityPink, fontWeight = FontWeight.Bold, fontSize = 11.sp)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { LocalStore.shareExport(context, false) }, modifier = Modifier.weight(1f)) {
-                Text("Export TXT")
-            }
-            OutlinedButton(onClick = { LocalStore.shareExport(context, true) }, modifier = Modifier.weight(1f)) {
-                Text("Export JSON")
-            }
+            OutlinedButton(onClick = { LocalStore.shareExport(context, "txt") }, modifier = Modifier.weight(1f)) { Text("Export TXT") }
+            OutlinedButton(onClick = { LocalStore.shareExport(context, "json") }, modifier = Modifier.weight(1f)) { Text("Export JSON") }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = { LocalStore.shareExport(context, "pdf") }, modifier = Modifier.weight(1f)) { Text("Export PDF") }
+            OutlinedButton(onClick = { LocalStore.shareExport(context, "zip") }, modifier = Modifier.weight(1f)) { Text("Export ZIP") }
         }
         Surface(color = ActivityPanel, shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
