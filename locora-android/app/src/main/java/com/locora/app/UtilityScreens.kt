@@ -106,7 +106,7 @@ fun SettingsScreen(
                 Column(Modifier.weight(1f)) {
                     Text("This phone's battery", color = Color.White, fontWeight = FontWeight.SemiBold)
                     Text(if (battery.percent >= 0) battery.percent.toString() + "% · " +
-                        if (battery.charging) "Charging" else "Not charging" else "Unavailable",
+                        (if (battery.charging) "Charging" else "Not charging") else "Unavailable",
                         color = ActivityMuted, fontSize = 11.sp)
                 }
                 IconButton(onClick = { refreshBattery++ }) { Icon(Icons.Default.Refresh, "Refresh battery", tint = ActivityPink) }
