@@ -128,6 +128,7 @@ fun ActivityScreen(onUsageSettings: () -> Unit, pairId: String, partnerUid: Stri
 @Composable
 fun SettingsScreen(
     onStartLocation: () -> Unit,
+    onStopLocation: () -> Unit,
     onBackgroundLocation: () -> Unit,
     onUsageSettings: () -> Unit,
     pairId: String,
@@ -163,6 +164,9 @@ fun SettingsScreen(
             Icon(Icons.Default.GpsFixed, null)
             Spacer(Modifier.width(6.dp))
             Text("Start location collection")
+        }
+        OutlinedButton(onClick = onStopLocation, modifier = Modifier.fillMaxWidth()) {
+            Text("Stop sharing my location")
         }
         OutlinedButton(onClick = onBackgroundLocation, modifier = Modifier.fillMaxWidth()) {
             Text("Request background location access")
