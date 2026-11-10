@@ -26,7 +26,7 @@ private val ActivityPink = Color(0xFFFF78B5)
 private val ActivityMuted = Color(0xFFADB6C7)
 
 @Composable
-fun ActivityScreen(onUsageSettings: () -> Unit, pairId: String) {
+fun ActivityScreen(onUsageSettings: () -> Unit, pairId: String, partnerUid: String) {
     val context = LocalContext.current
     var refresh by remember { mutableIntStateOf(0) }
     var share by remember {
@@ -34,6 +34,20 @@ fun ActivityScreen(onUsageSettings: () -> Unit, pairId: String) {
             .getBoolean("share_my_activity", false))
     }
     val recent = remember(refresh) { LocalStore.recentApps(context) }
+    var partnerConsent by remember { mutableStateOf(false) }
+    var partnerApps by remember { mutableStateOf(emptyList<RecentApp>()) }
+    DisposableEffect(pairId, partnerUid) {
+        if (partnerUid.isBlank()) {
+            onDispose { }
+        } else {
+            val consentListener = CloudRepository.listenActivityConsent(context, pairId, partnerUid) { partnerConsent = it }
+            val activityListener = CloudRepository.listenActivity(context, pairId, partnerUid) { partnerApps = it }
+            onDispose {
+                CloudRepository.removeActivityConsentListener(context, pairId, partnerUid, consentListener)
+                CloudRepository.removeActivityListener(context, pairId, partnerUid, activityListener)
+            }
+        }
+    }
     LaunchedEffect(refresh, share, pairId) {
         if (share && pairId.isNotBlank()) CloudRepository.publishActivity(context, pairId, recent)
     }
@@ -65,7 +79,28 @@ fun ActivityScreen(onUsageSettings: () -> Unit, pairId: String) {
                 }
             }
         }
-        Text("RECENTLY USED", color = ActivityPink, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+        Text("YOUR PERSON'S RECENT APPS", color = ActivityPink, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+        if (!partnerConsent) {
+            Text("Your person has not enabled activity sharing.", color = ActivityMuted, fontSize = 12.sp)
+        } else if (partnerApps.isEmpty()) {
+            Text("Activity sharing is enabled, but no recent-app data is available yet.", color = ActivityMuted, fontSize = 12.sp)
+        } else {
+            partnerApps.take(5).forEach { app ->
+                Surface(color = ActivityPanel, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()) {
+                    Row(Modifier.padding(13.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Apps, null, tint = Color(0xFF8FA9FF))
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(app.label, color = Color.White, fontWeight = FontWeight.SemiBold)
+                            Text(app.packageName, color = ActivityMuted, fontSize = 9.sp)
+                        }
+                        Text(DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
+                            .format(Date(app.lastUsed)), color = ActivityMuted, fontSize = 9.sp)
+                    }
+                }
+            }
+        }
+        Text("RECENTLY USED ON THIS PHONE", color = ActivityPink, fontWeight = FontWeight.Bold, fontSize = 11.sp)
         if (recent.isEmpty()) {
             Text("No usage data available. Grant LOCORA Usage Access in Android settings, then tap Refresh recent apps.",
                 color = ActivityMuted, fontSize = 12.sp)
