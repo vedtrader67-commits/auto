@@ -52,6 +52,26 @@ object CloudRepository {
 
     fun currentUid(): String? = auth.currentUser?.uid
     fun currentEmail(): String = auth.currentUser?.email.orEmpty()
+    fun restorePair(context: Context, done: (String?) -> Unit) {
+        val uid = currentUid()
+        if (uid == null) { done(null); return }
+        val profileRef = root(context).child("userProfiles").child(uid)
+        profileRef.child("pairId").get().addOnSuccessListener { snapshot ->
+            val remotePairId = snapshot.getValue(String::class.java).orEmpty()
+            if (remotePairId.isNotBlank()) {
+                context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                    .putString(PAIR_KEY, remotePairId).apply()
+                done(remotePairId)
+            } else {
+                val localPairId = currentPairId(context)
+                if (localPairId.isBlank()) { done(null); return@addOnSuccessListener }
+                ensurePublicId(context) { _, _ ->
+                    profileRef.child("pairId").setValue(localPairId)
+                    done(localPairId)
+                }
+            }
+        }.addOnFailureListener { done(currentPairId(context).takeIf { it.isNotBlank() }) }
+    }
     fun currentPairId(context: Context): String =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(PAIR_KEY, "").orEmpty()
 
@@ -116,7 +136,7 @@ object CloudRepository {
             if (existing.isNotBlank()) { done(existing, null); return@addOnSuccessListener }
             val alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
             val publicId = "LC" + buildString { repeat(10) { append(alphabet[random.nextInt(alphabet.length)]) } }
-            profileRef.setValue(mapOf("publicId" to publicId, "createdAt" to System.currentTimeMillis()))
+            profileRef.updateChildren(mapOf("publicId" to publicId, "createdAt" to System.currentTimeMillis()))
                 .addOnSuccessListener { done(publicId, null) }
                 .addOnFailureListener { done(null, it.message ?: "Could not create your discovery ID.") }
         }.addOnFailureListener { done(null, it.message ?: "Could not load your discovery ID.") }
@@ -364,6 +384,13 @@ object CloudRepository {
     private fun savePair(context: Context, pairId: String) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(PAIR_KEY, pairId).apply()
         val uid = currentUid() ?: return
+        val profileRef = root(context).child("userProfiles").child(uid)
+        profileRef.get().addOnSuccessListener { profile ->
+            if (profile.exists()) profileRef.child("pairId").setValue(pairId)
+            else ensurePublicId(context) { _, error ->
+                if (error == null) profileRef.child("pairId").setValue(pairId)
+            }
+        }
         val directoryRef = root(context).child("publicDirectory").child(uid)
         directoryRef.get().addOnSuccessListener { snapshot ->
             if (snapshot.exists()) directoryRef.child("paired").setValue(true)
