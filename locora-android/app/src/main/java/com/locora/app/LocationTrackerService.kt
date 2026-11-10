@@ -36,6 +36,7 @@ class LocationTrackerService : Service() {
                     .apply()
                 val pairId = prefs.getString("cloud_pair_id", "").orEmpty()
                 if (pairId.isNotBlank()) {
+                    CloudRepository.heartbeatPresence(this@LocationTrackerService, pairId)
                     CloudRepository.publishLocation(this@LocationTrackerService, pairId, loc.latitude, loc.longitude)
                     val battery = LocalStore.battery(this@LocationTrackerService)
                     CloudRepository.updateBattery(this@LocationTrackerService, pairId, battery.percent, battery.charging)
