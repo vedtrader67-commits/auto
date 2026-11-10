@@ -93,10 +93,11 @@ class MainActivity : ComponentActivity() {
                             }
                         },
                         onSignOut = {
-                            CloudRepository.leavePair(this)
-                            FirebaseAuth.getInstance().signOut()
-                            signedInUser = null
-                            activePairId = ""
+                            CloudRepository.leavePair(this) {
+                                FirebaseAuth.getInstance().signOut()
+                                signedInUser = null
+                                activePairId = ""
+                            }
                         }
                     )
                     else -> LocoraApp(
@@ -107,11 +108,12 @@ class MainActivity : ComponentActivity() {
                         onBackgroundLocation = { requestBackgroundLocation() },
                         onUsageSettings = { startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) },
                         onSignOut = {
-                            CloudRepository.leavePair(this)
-                            stopService(Intent(this, LocationTrackerService::class.java))
-                            FirebaseAuth.getInstance().signOut()
-                            signedInUser = null
-                            activePairId = ""
+                            CloudRepository.leavePair(this) {
+                                stopService(Intent(this, LocationTrackerService::class.java))
+                                FirebaseAuth.getInstance().signOut()
+                                signedInUser = null
+                                activePairId = ""
+                            }
                         }
                     )
                 }
