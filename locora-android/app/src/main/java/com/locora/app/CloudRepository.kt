@@ -28,6 +28,7 @@ data class CloudLocation(
 )
 
 data class CloudPresence(val uid: String, val online: Boolean, val updatedAt: Long)
+data class CloudBattery(val uid: String, val percent: Int, val charging: Boolean, val updatedAt: Long)
 
 object CloudRepository {
     private const val PREFS = "locora_local"
@@ -230,6 +231,30 @@ object CloudRepository {
         return listener
     }
 
+
+
+    fun listenBattery(context: Context, pairId: String, callback: (List<CloudBattery>) -> Unit): ValueEventListener {
+        val ref = root(context).child("pairs").child(pairId).child("battery")
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                callback(snapshot.children.map { child ->
+                    CloudBattery(
+                        child.key.orEmpty(),
+                        child.child("percent").getValue(Int::class.java) ?: -1,
+                        child.child("charging").getValue(Boolean::class.java) ?: false,
+                        child.child("updatedAt").getValue(Long::class.java) ?: 0L
+                    )
+                })
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        }
+        ref.addValueEventListener(listener)
+        return listener
+    }
+
+    fun removeBatteryListener(context: Context, pairId: String, listener: ValueEventListener) {
+        root(context).child("pairs").child(pairId).child("battery").removeEventListener(listener)
+    }
 
     fun listenPresence(context: Context, pairId: String, callback: (List<CloudPresence>) -> Unit): ValueEventListener {
         val ref = root(context).child("pairs").child(pairId).child("presence")
