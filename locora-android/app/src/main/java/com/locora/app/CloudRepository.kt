@@ -68,7 +68,7 @@ object CloudRepository {
             .putString(DB_URL_KEY, normalized).apply()
         synchronized(this) { cachedDb = null }
         try {
-            database(context).reference.child(".info/connected").get()
+            database(context).getReference(".info/connected").get()
                 .addOnSuccessListener { done(null) }
                 .addOnFailureListener { done(it.message ?: "Could not reach Realtime Database.") }
         } catch (e: Exception) {
