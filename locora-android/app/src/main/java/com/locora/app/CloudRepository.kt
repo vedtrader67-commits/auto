@@ -230,6 +230,18 @@ object CloudRepository {
     }
 
 
+
+    fun heartbeatPresence(context: Context, pairId: String) {
+        if (pairId.isBlank()) return
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val now = System.currentTimeMillis()
+        val last = prefs.getLong("presence_heartbeat_at", 0L)
+        if (now - last >= 30000L) {
+            prefs.edit().putLong("presence_heartbeat_at", now).apply()
+            setPresence(context, pairId)
+        }
+    }
+
     fun setOffline(context: Context, pairId: String) {
         val uid = currentUid() ?: return
         root(context).child("pairs").child(pairId).child("presence").child(uid).setValue(
