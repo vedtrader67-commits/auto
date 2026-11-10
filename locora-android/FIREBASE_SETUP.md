@@ -22,7 +22,7 @@ The Realtime Database rules deny access by default and restrict writes to the au
 
 Photo and voice attachments are compressed and stored as small Base64 values in Realtime Database to avoid Firebase Storage. This is for small personal messages, not large media libraries.
 
-The app registers FCM device tokens and can display minimal push notifications. A trusted sender service is still needed to send FCM messages. Firebase's Android client SDK must never contain an Admin SDK key. Offline Missing You push delivery is not active until that server is deployed and configured.
+The app registers FCM device tokens and displays minimal data-only push notifications. The included Render service under `backend/` verifies Firebase ID tokens, checks pair membership and offline presence, applies a 60-second cooldown, and sends the FCM event. Deploy the service from the repository Blueprint `render.yaml` on the `locora-android` branch. In Render, set `FIREBASE_DATABASE_URL` to the exact database URL and `FIREBASE_SERVICE_ACCOUNT_JSON` to the full JSON content of a Firebase Admin service account key. Never commit that service-account key or put it in the Android app. Copy the deployed HTTPS service URL into LOCORA **Settings → Missing You Push Service** on both phones. On Render's free service tier, the service may sleep while idle, so the first push after idle can be delayed.
 
 Firebase Cloud Storage requires the Blaze billing plan for access to its buckets, including the default bucket. Do not enable it unless you accept pay-as-you-go billing. Firebase Realtime Database and Authentication offer no-cost quotas/features, subject to their published limits.
 
