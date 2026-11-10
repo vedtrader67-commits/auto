@@ -82,6 +82,9 @@ class MainActivity : ComponentActivity() {
     private val backgroundPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { }
+    private val notificationPermission = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -139,6 +142,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
         if (::fused.isInitialized && hasLocationPermission()) refreshLocation()
         presenceHandler.removeCallbacks(presenceHeartbeat)
         if (activePairId.isNotBlank()) presenceHandler.post(presenceHeartbeat)
@@ -261,6 +268,7 @@ private fun LocoraApp(
     val partnerPoint = locations.firstOrNull { it.uid == partnerUid }
     val partnerPresence = presences.firstOrNull { it.uid == partnerUid }
     val partnerLastSeen = partnerPresence?.updatedAt ?: 0L
+    val partnerLocationUpdatedAt = partnerPoint?.updatedAt ?: 0L
     val partnerOnline = partnerPresence?.online == true &&
         partnerLastSeen > 0L && System.currentTimeMillis() - partnerLastSeen < 120000L
     val partnerBattery = batteries.firstOrNull { it.uid == partnerUid }
@@ -285,6 +293,7 @@ private fun LocoraApp(
                     location, partnerPoint, partnerOnline,
                     partnerBattery?.percent ?: -1, partnerBattery?.charging ?: false,
                     partnerLastSeen,
+                    partnerLocationUpdatedAt,
                     onStartLocation, onRefreshLocation,
                     onMissingYou = {
                         CloudRepository.sendMissingYou(context, pairId) { error ->
@@ -336,6 +345,7 @@ private fun MapScreen(
     partnerBattery: Int,
     partnerCharging: Boolean,
     partnerLastSeen: Long,
+    partnerLocationUpdatedAt: Long,
     onStartLocation: () -> Unit,
     onRefresh: () -> Unit,
     onMissingYou: () -> Unit,
@@ -380,8 +390,9 @@ private fun MapScreen(
                         Text(
                             when {
                                 partner == null -> if (partnerOnline) "Online · waiting for location" else "Offline · last location not available"
-                                else -> "Lat %.5f · Lon %.5f · %s".format(partner.latitude, partner.longitude,
-                                    if (partnerOnline) "online" else "last known")
+                                else -> "Lat %.5f · Lon %.5f".format(partner.latitude, partner.longitude) +
+                                    if (partnerLocationUpdatedAt > 0L) " · updated " +
+                                        DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(partnerLocationUpdatedAt)) else ""
                             } + if (!partnerOnline && partnerLastSeen > 0L) " · last seen " +
                                 DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(partnerLastSeen)) else "",
                             color = Muted, fontSize = 10.sp
