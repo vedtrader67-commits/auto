@@ -36,6 +36,8 @@ data class CloudLocation(
 
 data class CloudPresence(val uid: String, val online: Boolean, val updatedAt: Long)
 data class CloudBattery(val uid: String, val percent: Int, val charging: Boolean, val updatedAt: Long)
+data class DirectoryProfile(val uid: String, val publicId: String, val paired: Boolean)
+data class PairConnectionRequest(val uid: String, val publicId: String, val status: String, val inviteCode: String, val createdAt: Long)
 
 object CloudRepository {
     private const val PREFS = "locora_local"
@@ -104,6 +106,175 @@ object CloudRepository {
     }
 
     fun signOut() = auth.signOut()
+
+    fun ensurePublicId(context: Context, done: (String?, String?) -> Unit) {
+        val uid = currentUid()
+        if (uid == null) { done(null, "Sign in first."); return }
+        val profileRef = root(context).child("userProfiles").child(uid)
+        profileRef.get().addOnSuccessListener { snapshot ->
+            val existing = snapshot.child("publicId").getValue(String::class.java).orEmpty()
+            if (existing.isNotBlank()) { done(existing, null); return@addOnSuccessListener }
+            val alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+            val publicId = "LC" + buildString { repeat(10) { append(alphabet[random.nextInt(alphabet.length)]) } }
+            profileRef.setValue(mapOf("publicId" to publicId, "createdAt" to System.currentTimeMillis()))
+                .addOnSuccessListener { done(publicId, null) }
+                .addOnFailureListener { done(null, it.message ?: "Could not create your discovery ID.") }
+        }.addOnFailureListener { done(null, it.message ?: "Could not load your discovery ID.") }
+    }
+
+    fun getDiscoverable(context: Context, done: (Boolean) -> Unit) {
+        val uid = currentUid() ?: run { done(false); return }
+        root(context).child("publicDirectory").child(uid).get()
+            .addOnSuccessListener { done(it.exists()) }
+            .addOnFailureListener { done(false) }
+    }
+
+    fun setDiscoverable(context: Context, enabled: Boolean, done: (String?) -> Unit) {
+        val uid = currentUid()
+        if (uid == null) { done("Sign in first."); return }
+        ensurePublicId(context) { publicId, error ->
+            if (error != null || publicId.isNullOrBlank()) { done(error ?: "Could not load your ID."); return@ensurePublicId }
+            val ref = root(context).child("publicDirectory").child(uid)
+            if (enabled) {
+                ref.setValue(mapOf(
+                    "publicId" to publicId,
+                    "createdAt" to System.currentTimeMillis(),
+                    "paired" to currentPairId(context).isNotBlank()
+                )).addOnSuccessListener { done(null) }
+                    .addOnFailureListener { done(it.message ?: "Could not enable discovery.") }
+            } else {
+                ref.removeValue().addOnSuccessListener { done(null) }
+                    .addOnFailureListener { done(it.message ?: "Could not hide your discovery ID.") }
+            }
+        }
+    }
+
+    fun listenDirectory(context: Context, callback: (List<DirectoryProfile>) -> Unit): ValueEventListener {
+        val ref = root(context).child("publicDirectory")
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                callback(snapshot.children.mapNotNull { child ->
+                    val id = child.child("publicId").getValue(String::class.java).orEmpty()
+                    if (id.isBlank()) null else DirectoryProfile(
+                        child.key.orEmpty(), id, child.child("paired").getValue(Boolean::class.java) ?: false
+                    )
+                })
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        }
+        ref.addValueEventListener(listener)
+        return listener
+    }
+
+    fun removeDirectoryListener(context: Context, listener: ValueEventListener) {
+        root(context).child("publicDirectory").removeEventListener(listener)
+    }
+
+    fun listenIncomingRequests(context: Context, callback: (List<PairConnectionRequest>) -> Unit): ValueEventListener {
+        val uid = currentUid() ?: return object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {}
+            override fun onCancelled(error: DatabaseError) {}
+        }
+        val ref = root(context).child("connectionRequests").child(uid)
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                callback(snapshot.children.mapNotNull { child ->
+                    val otherId = child.child("requesterPublicId").getValue(String::class.java).orEmpty()
+                    val otherUid = child.child("requesterUid").getValue(String::class.java) ?: child.key ?: return@mapNotNull null
+                    PairConnectionRequest(
+                        otherUid, otherId, child.child("status").getValue(String::class.java).orEmpty(),
+                        child.child("inviteCode").getValue(String::class.java).orEmpty(),
+                        child.child("createdAt").getValue(Long::class.java) ?: 0L
+                    )
+                })
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        }
+        ref.addValueEventListener(listener)
+        return listener
+    }
+
+    fun removeIncomingRequestsListener(context: Context, listener: ValueEventListener) {
+        val uid = currentUid() ?: return
+        root(context).child("connectionRequests").child(uid).removeEventListener(listener)
+    }
+
+    fun listenSentRequests(context: Context, callback: (List<PairConnectionRequest>) -> Unit): ValueEventListener {
+        val uid = currentUid() ?: return object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {}
+            override fun onCancelled(error: DatabaseError) {}
+        }
+        val ref = root(context).child("sentRequests").child(uid)
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                callback(snapshot.children.mapNotNull { child ->
+                    val otherId = child.child("targetPublicId").getValue(String::class.java).orEmpty()
+                    val otherUid = child.child("targetUid").getValue(String::class.java) ?: child.key ?: return@mapNotNull null
+                    PairConnectionRequest(
+                        otherUid, otherId, child.child("status").getValue(String::class.java).orEmpty(),
+                        child.child("inviteCode").getValue(String::class.java).orEmpty(),
+                        child.child("createdAt").getValue(Long::class.java) ?: 0L
+                    )
+                })
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        }
+        ref.addValueEventListener(listener)
+        return listener
+    }
+
+    fun removeSentRequestsListener(context: Context, listener: ValueEventListener) {
+        val uid = currentUid() ?: return
+        root(context).child("sentRequests").child(uid).removeEventListener(listener)
+    }
+
+    fun sendConnectionRequest(context: Context, targetUid: String, targetPublicId: String, done: (String?) -> Unit) {
+        val uid = currentUid()
+        if (uid == null) { done("Sign in first."); return }
+        if (targetUid.isBlank() || targetUid == uid) { done("You cannot request your own ID."); return }
+        val profileRef = root(context).child("userProfiles").child(uid)
+        val targetRef = root(context).child("publicDirectory").child(targetUid)
+        profileRef.get().addOnSuccessListener { ownProfile ->
+            val ownPublicId = ownProfile.child("publicId").getValue(String::class.java).orEmpty()
+            if (ownPublicId.isBlank()) { done("Your discovery ID is not ready yet."); return@addOnSuccessListener }
+            targetRef.get().addOnSuccessListener { target ->
+                if (!target.exists() || target.child("publicId").getValue(String::class.java) != targetPublicId) {
+                    done("This ID is no longer discoverable."); return@addOnSuccessListener
+                }
+                if (target.child("paired").getValue(Boolean::class.java) == true) {
+                    done("This account is already connected to someone."); return@addOnSuccessListener
+                }
+                val now = System.currentTimeMillis()
+                val payload = mapOf(
+                    "requesterUid" to uid, "requesterPublicId" to ownPublicId,
+                    "targetUid" to targetUid, "targetPublicId" to targetPublicId,
+                    "createdAt" to now, "status" to "pending", "inviteCode" to ""
+                )
+                val updates = hashMapOf<String, Any?>(
+                    "connectionRequests/$targetUid/$uid" to payload,
+                    "sentRequests/$uid/$targetUid" to payload
+                )
+                root(context).updateChildren(updates)
+                    .addOnSuccessListener { done(null) }
+                    .addOnFailureListener { done(it.message ?: "Could not send the connection request.") }
+            }.addOnFailureListener { done(it.message ?: "Could not check that ID.") }
+        }.addOnFailureListener { done(it.message ?: "Could not load your discovery ID.") }
+    }
+
+    fun respondToConnectionRequest(context: Context, requesterUid: String, status: String, inviteCode: String = "", done: (String?) -> Unit) {
+        val uid = currentUid()
+        if (uid == null) { done("Sign in first."); return }
+        if (status != "accepted" && status != "declined") { done("Invalid request response."); return }
+        val updates = hashMapOf<String, Any?>(
+            "connectionRequests/$uid/$requesterUid/status" to status,
+            "connectionRequests/$uid/$requesterUid/inviteCode" to inviteCode,
+            "sentRequests/$requesterUid/$uid/status" to status,
+            "sentRequests/$requesterUid/$uid/inviteCode" to inviteCode
+        )
+        root(context).updateChildren(updates)
+            .addOnSuccessListener { done(null) }
+            .addOnFailureListener { done(it.message ?: "Could not update the connection request.") }
+    }
 
     fun createPair(context: Context, done: (String?, String?) -> Unit) {
         val uid = currentUid()
@@ -192,6 +363,11 @@ object CloudRepository {
 
     private fun savePair(context: Context, pairId: String) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(PAIR_KEY, pairId).apply()
+        val uid = currentUid() ?: return
+        val directoryRef = root(context).child("publicDirectory").child(uid)
+        directoryRef.get().addOnSuccessListener { snapshot ->
+            if (snapshot.exists()) directoryRef.child("paired").setValue(true)
+        }
     }
 
     fun leavePair(context: Context, done: () -> Unit = {}) {
