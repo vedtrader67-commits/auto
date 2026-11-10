@@ -32,6 +32,7 @@ import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.messaging.FirebaseMessaging
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -219,6 +220,9 @@ private fun LocoraApp(
 
     DisposableEffect(pairId) {
         CloudRepository.setPresence(context, pairId)
+        FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
+            CloudRepository.saveFcmToken(context, pairId, token)
+        }
         val locationListener = CloudRepository.listenLocations(context, pairId) { locations = it }
         val presenceListener = CloudRepository.listenPresence(context, pairId) { presences = it }
         val memberListener = CloudRepository.listenMembers(context, pairId) { members = it }
