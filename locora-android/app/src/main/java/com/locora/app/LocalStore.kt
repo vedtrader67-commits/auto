@@ -115,6 +115,14 @@ object LocalStore {
 
     fun hasPin(context: Context): Boolean = prefs(context).contains("chat_pin_hash")
 
+    fun biometricEnabled(context: Context): Boolean =
+        prefs(context).getBoolean("chat_biometric_enabled", false)
+
+    fun setBiometricEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean("chat_biometric_enabled", enabled).apply()
+    }
+
+
     fun setPin(context: Context, pin: String) {
         val salt = ByteArray(16).also { SecureRandom().nextBytes(it) }
         val hash = derive(pin, salt)
