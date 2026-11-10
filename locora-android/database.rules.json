@@ -94,6 +94,38 @@
         ".write": "auth != null && auth.uid == $uid && newData.child('pairId').isString() && root.child('pairs').child(newData.child('pairId').val()).child('members').child(auth.uid).exists()",
         ".validate": "newData.hasChildren(['pairId','token','updatedAt']) && newData.child('token').isString() && newData.child('token').val().length <= 4096 && newData.child('updatedAt').isNumber()"
       }
+    },
+    "userProfiles": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid",
+        ".write": "auth != null && auth.uid == $uid",
+        ".validate": "newData.hasChildren(['publicId','createdAt']) && newData.child('publicId').isString() && newData.child('publicId').val().length >= 8 && newData.child('publicId').val().length <= 20 && newData.child('createdAt').isNumber()"
+      }
+    },
+    "publicDirectory": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.uid == $uid",
+        ".validate": "newData.hasChildren(['publicId','createdAt','paired']) && newData.child('publicId').isString() && newData.child('createdAt').isNumber() && newData.child('paired').isBoolean()"
+      }
+    },
+    "connectionRequests": {
+      "$targetUid": {
+        ".read": "auth != null && auth.uid == $targetUid",
+        "$requesterUid": {
+          ".write": "auth != null && ((!data.exists() && auth.uid == $requesterUid && $requesterUid != $targetUid && newData.child('requesterUid').val() == auth.uid && newData.child('targetUid').val() == $targetUid && newData.child('status').val() == 'pending') || (data.exists() && auth.uid == $targetUid && data.child('status').val() == 'pending' && newData.child('requesterUid').val() == $requesterUid && newData.child('targetUid').val() == auth.uid && (newData.child('status').val() == 'accepted' || newData.child('status').val() == 'declined')))",
+          ".validate": "newData.hasChildren(['requesterUid','requesterPublicId','targetUid','targetPublicId','createdAt','status','inviteCode']) && newData.child('requesterUid').isString() && newData.child('requesterPublicId').isString() && newData.child('targetUid').isString() && newData.child('targetPublicId').isString() && newData.child('createdAt').isNumber() && (newData.child('status').val() == 'pending' || newData.child('status').val() == 'accepted' || newData.child('status').val() == 'declined') && newData.child('inviteCode').isString() && newData.child('inviteCode').val().length <= 10"
+        }
+      }
+    },
+    "sentRequests": {
+      "$requesterUid": {
+        ".read": "auth != null && auth.uid == $requesterUid",
+        "$targetUid": {
+          ".write": "auth != null && ((!data.exists() && auth.uid == $requesterUid && $targetUid != $requesterUid && newData.child('requesterUid').val() == auth.uid && newData.child('targetUid').val() == $targetUid && newData.child('status').val() == 'pending') || (data.exists() && auth.uid == $targetUid && data.child('status').val() == 'pending' && newData.child('requesterUid').val() == $requesterUid && newData.child('targetUid').val() == auth.uid && (newData.child('status').val() == 'accepted' || newData.child('status').val() == 'declined')))",
+          ".validate": "newData.hasChildren(['requesterUid','requesterPublicId','targetUid','targetPublicId','createdAt','status','inviteCode']) && newData.child('requesterUid').isString() && newData.child('requesterPublicId').isString() && newData.child('targetUid').isString() && newData.child('targetPublicId').isString() && newData.child('createdAt').isNumber() && (newData.child('status').val() == 'pending' || newData.child('status').val() == 'accepted' || newData.child('status').val() == 'declined') && newData.child('inviteCode').isString() && newData.child('inviteCode').val().length <= 10"
+        }
+      }
     }
   }
 }
