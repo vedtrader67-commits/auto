@@ -220,7 +220,7 @@ fun SettingsScreen(
                 Text("Signed in as " + CloudRepository.currentEmail(), color = Color.White, fontWeight = FontWeight.SemiBold)
                 Text("Pair ID: " + pairId.take(8) + "…", color = ActivityMuted, fontSize = 10.sp)
                 Text("Location, presence, battery, chat and consented activity sync through your Firebase Realtime Database.", color = ActivityMuted, fontSize = 11.sp)
-                OutlinedButton(onClick = onSignOut, modifier = Modifier.fillMaxWidth()) { Text("Sign out of LOCORA") }
+                OutlinedButton(onClick = onSignOut, modifier = Modifier.fillMaxWidth()) { Text("Sign out (keep this pair)") }
             }
         }
         Text("CHAT BACKUP", color = ActivityPink, fontWeight = FontWeight.Bold, fontSize = 11.sp)
