@@ -59,6 +59,9 @@
           }
         },
         "messages": {
+          ".indexOn": [
+            "createdAt"
+          ],
           "$messageId": {
             ".write": "auth != null && root.child('pairs').child($pairId).child('members').child(auth.uid).exists() && !data.exists() && newData.child('senderUid').val() == auth.uid",
             ".validate": "newData.hasChildren(['senderUid','type','body','attachment','mimeType','createdAt']) && newData.child('type').isString() && newData.child('body').isString() && newData.child('body').val().length <= 4000 && newData.child('attachment').isString() && newData.child('attachment').val().length <= 1100000 && newData.child('createdAt').isNumber()"
