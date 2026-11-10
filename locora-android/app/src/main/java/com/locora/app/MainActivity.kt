@@ -314,7 +314,7 @@ private fun LocoraApp(
                 )
                 "Chat" -> ChatScreen(chatUnlocked, { chatUnlocked = true }, pairId)
                 "Activity" -> ActivityScreen(onUsageSettings, pairId, partnerUid)
-                else -> SettingsScreen(onStartLocation, onBackgroundLocation, onUsageSettings, pairId, onSignOut)
+                else -> SettingsScreen(onStartLocation, onStopLocation, onBackgroundLocation, onUsageSettings, pairId, onSignOut)
             }
         }
         NavigationBar(containerColor = Panel, tonalElevation = 0.dp) {
