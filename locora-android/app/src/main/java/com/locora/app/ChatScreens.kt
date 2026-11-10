@@ -8,7 +8,7 @@ import android.media.MediaRecorder
 import android.net.Uri
 import android.os.Build
 import android.widget.ImageView
-import androidx.activity.ComponentActivity
+import androidx.fragment.app.FragmentActivity
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
@@ -33,7 +33,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.content.ContextCompat
 import java.io.File
 import java.util.concurrent.Executor
 import java.text.DateFormat
@@ -234,7 +233,7 @@ private fun PinGate(onUnlock: () -> Unit) {
     var confirming by remember { mutableStateOf(false) }
 
     fun unlockWithBiometric() {
-        val activity = context as? ComponentActivity
+        val activity = context as? FragmentActivity
         if (activity == null) { error = "Biometric unlock is unavailable here."; return }
         val manager = BiometricManager.from(context)
         if (manager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) != BiometricManager.BIOMETRIC_SUCCESS) {
