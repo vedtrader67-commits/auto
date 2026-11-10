@@ -435,7 +435,14 @@ object CloudRepository {
 
     fun setActivityConsent(context: Context, pairId: String, enabled: Boolean) {
         val uid = currentUid() ?: return
-        root(context).child("pairs").child(pairId).child("activityConsent").child(uid).setValue(enabled)
+        val pair = root(context).child("pairs").child(pairId)
+        if (enabled) {
+            pair.child("activityConsent").child(uid).setValue(true)
+        } else {
+            pair.child("activity").child(uid).removeValue().addOnCompleteListener {
+                pair.child("activityConsent").child(uid).setValue(false)
+            }
+        }
     }
 
     fun publishActivity(context: Context, pairId: String, apps: List<RecentApp>) {
