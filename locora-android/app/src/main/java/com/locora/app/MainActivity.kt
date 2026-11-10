@@ -30,6 +30,8 @@ import androidx.core.content.ContextCompat
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -44,7 +46,13 @@ private val Green = Color(0xFF67D6A2)
 
 class MainActivity : ComponentActivity() {
     private var currentPoint by mutableStateOf<Pair<Double, Double>?>(null)
+    private var signedInUser by mutableStateOf<FirebaseUser?>(null)
+    private var activePairId by mutableStateOf("")
     private lateinit var fused: com.google.android.gms.location.FusedLocationProviderClient
+    private val authListener = FirebaseAuth.AuthStateListener { firebaseAuth ->
+        signedInUser = firebaseAuth.currentUser
+        activePairId = if (firebaseAuth.currentUser == null) "" else CloudRepository.currentPairId(this)
+    }
 
     private val locationPermission = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -62,21 +70,68 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         fused = LocationServices.getFusedLocationProviderClient(this)
+        signedInUser = FirebaseAuth.getInstance().currentUser
+        activePairId = if (signedInUser == null) "" else CloudRepository.currentPairId(this)
         readCachedLocation()
+        FirebaseAuth.getInstance().addAuthStateListener(authListener)
         setContent {
-            LocoraApp(
-                location = currentPoint,
-                onStartLocation = { requestLocation() },
-                onRefreshLocation = { refreshLocation() },
-                onBackgroundLocation = { requestBackgroundLocation() },
-                onUsageSettings = { startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) }
-            )
+            MaterialTheme(colorScheme = darkColorScheme(
+                primary = Pink, secondary = Green, background = Ink, surface = Panel,
+                onPrimary = Ink, onBackground = Color.White, onSurface = Color.White
+            )) {
+                when {
+                    signedInUser == null -> AccountScreen {
+                        signedInUser = FirebaseAuth.getInstance().currentUser
+                        activePairId = CloudRepository.currentPairId(this)
+                    }
+                    activePairId.isBlank() -> PairingScreen(
+                        onPaired = {
+                            activePairId = CloudRepository.currentPairId(this)
+                            if (activePairId.isNotBlank()) {
+                                CloudRepository.setPresence(this, activePairId)
+                                if (hasLocationPermission()) startLocationService()
+                            }
+                        },
+                        onSignOut = {
+                            CloudRepository.leavePair(this)
+                            FirebaseAuth.getInstance().signOut()
+                            signedInUser = null
+                            activePairId = ""
+                        }
+                    )
+                    else -> LocoraApp(
+                        location = currentPoint,
+                        pairId = activePairId,
+                        onStartLocation = { requestLocation() },
+                        onRefreshLocation = { refreshLocation() },
+                        onBackgroundLocation = { requestBackgroundLocation() },
+                        onUsageSettings = { startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) },
+                        onSignOut = {
+                            CloudRepository.leavePair(this)
+                            stopService(Intent(this, LocationTrackerService::class.java))
+                            FirebaseAuth.getInstance().signOut()
+                            signedInUser = null
+                            activePairId = ""
+                        }
+                    )
+                }
+            }
         }
     }
 
     override fun onResume() {
         super.onResume()
         if (::fused.isInitialized && hasLocationPermission()) refreshLocation()
+        if (activePairId.isNotBlank()) {
+            CloudRepository.setPresence(this, activePairId)
+            val battery = LocalStore.battery(this)
+            CloudRepository.updateBattery(this, activePairId, battery.percent, battery.charging)
+        }
+    }
+
+    override fun onDestroy() {
+        FirebaseAuth.getInstance().removeAuthStateListener(authListener)
+        super.onDestroy()
     }
 
     private fun hasLocationPermission(): Boolean =
@@ -102,10 +157,10 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun startLocationService() {
-        if (hasLocationPermission()) {
-            try { ContextCompat.startForegroundService(this, Intent(this, LocationTrackerService::class.java)) }
-            catch (_: Exception) { }
-        }
+        if (!hasLocationPermission()) return
+        if (activePairId.isNotBlank()) CloudRepository.setLocationConsent(this, activePairId, true)
+        try { ContextCompat.startForegroundService(this, Intent(this, LocationTrackerService::class.java)) }
+        catch (_: Exception) { }
     }
 
     private fun readCachedLocation() {
@@ -136,87 +191,132 @@ class MainActivity : ComponentActivity() {
             .putString("last_lon", loc.longitude.toString())
             .putLong("last_location_at", System.currentTimeMillis())
             .apply()
+        if (activePairId.isNotBlank()) CloudRepository.publishLocation(this, activePairId, loc.latitude, loc.longitude)
     }
 }
 
 @Composable
 private fun LocoraApp(
     location: Pair<Double, Double>?,
+    pairId: String,
     onStartLocation: () -> Unit,
     onRefreshLocation: () -> Unit,
     onBackgroundLocation: () -> Unit,
-    onUsageSettings: () -> Unit
+    onUsageSettings: () -> Unit,
+    onSignOut: () -> Unit
 ) {
+    val context = LocalContext.current
     var tab by remember { mutableStateOf("Map") }
     var chatUnlocked by remember { mutableStateOf(false) }
     var unlockUntil by remember { mutableLongStateOf(0L) }
+    var locations by remember { mutableStateOf(emptyList<CloudLocation>()) }
+    var presences by remember { mutableStateOf(emptyList<CloudPresence>()) }
+    var members by remember { mutableStateOf(emptyList<String>()) }
+    var batteries by remember { mutableStateOf(emptyList<CloudBattery>()) }
+    var missingMessage by remember { mutableStateOf("") }
 
-    MaterialTheme(colorScheme = darkColorScheme(
-        primary = Pink, secondary = Green, background = Ink, surface = Panel,
-        onPrimary = Ink, onBackground = Color.White, onSurface = Color.White
-    )) {
-        Surface(Modifier.fillMaxSize(), color = Ink) {
-            Column(Modifier.fillMaxSize()) {
-                Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text("LOCORA", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Black)
-                        Text("your private little world  ♥", color = Pink, fontSize = 12.sp)
-                    }
-                    Surface(color = Panel, shape = CircleShape) {
-                        Text("2 PEOPLE ONLY", Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
-                            color = Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-                Box(Modifier.weight(1f).fillMaxWidth()) {
-                    when (tab) {
-                        "Map" -> MapScreen(location, onStartLocation, onRefreshLocation)
-                        "Chat" -> ChatScreen(chatUnlocked) { chatUnlocked = true }
-                        "Activity" -> ActivityScreen(onUsageSettings)
-                        else -> SettingsScreen(onStartLocation, onBackgroundLocation, onUsageSettings)
-                    }
-                }
-                NavigationBar(containerColor = Panel, tonalElevation = 0.dp) {
-                    listOf("Map", "Chat", "Activity", "Settings").forEach { item ->
-                        NavigationBarItem(
-                            selected = tab == item,
-                            onClick = {
-                                val now = System.currentTimeMillis()
-                                if (tab == "Chat" && item != "Chat" && chatUnlocked) unlockUntil = now + 60_000L
-                                if (item == "Chat" && now > unlockUntil) chatUnlocked = false
-                                tab = item
-                            },
-                            icon = {
-                                Icon(when (item) {
-                                    "Map" -> Icons.Default.Map
-                                    "Chat" -> Icons.Default.Favorite
-                                    "Activity" -> Icons.Default.PhoneAndroid
-                                    else -> Icons.Default.Settings
-                                }, contentDescription = item)
-                            },
-                            label = { Text(item) },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = Pink, selectedTextColor = Pink,
-                                indicatorColor = Color(0xFF382437),
-                                unselectedIconColor = Muted, unselectedTextColor = Muted
-                            )
-                        )
-                    }
-                }
+    DisposableEffect(pairId) {
+        CloudRepository.setPresence(context, pairId)
+        val locationListener = CloudRepository.listenLocations(context, pairId) { locations = it }
+        val presenceListener = CloudRepository.listenPresence(context, pairId) { presences = it }
+        val memberListener = CloudRepository.listenMembers(context, pairId) { members = it }
+        val batteryListener = CloudRepository.listenBattery(context, pairId) { batteries = it }
+        val missingListener = CloudRepository.observeMissingYou(context, pairId) {
+            missingMessage = "Your person sent a Missing You signal."
+        }
+        onDispose {
+            CloudRepository.removeLocationsListener(context, pairId, locationListener)
+            CloudRepository.removePresenceListener(context, pairId, presenceListener)
+            CloudRepository.removeMembersListener(context, pairId, memberListener)
+            CloudRepository.removeBatteryListener(context, pairId, batteryListener)
+        }
+    }
+
+    val myUid = CloudRepository.currentUid().orEmpty()
+    val partnerUid = members.firstOrNull { it != myUid }.orEmpty()
+    val partnerPoint = locations.firstOrNull { it.uid == partnerUid }
+    val partnerOnline = presences.firstOrNull { it.uid == partnerUid }?.online == true
+    val partnerBattery = batteries.firstOrNull { it.uid == partnerUid }
+
+    Column(Modifier.fillMaxSize()) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("LOCORA", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Black)
+                Text("your private little world  ♥", color = Pink, fontSize = 12.sp)
+            }
+            Surface(color = Panel, shape = CircleShape) {
+                Text("PAIRED · 2", Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
+                    color = Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            when (tab) {
+                "Map" -> MapScreen(
+                    location, partnerPoint, partnerOnline,
+                    partnerBattery?.percent ?: -1, partnerBattery?.charging ?: false,
+                    onStartLocation, onRefreshLocation,
+                    onMissingYou = {
+                        CloudRepository.sendMissingYou(context, pairId) { error ->
+                            missingMessage = error ?: "Missing You signal saved. Their phone can receive it when it reconnects."
+                        }
+                    },
+                    missingMessage = missingMessage
+                )
+                "Chat" -> ChatScreen(chatUnlocked, { chatUnlocked = true }, pairId)
+                "Activity" -> ActivityScreen(onUsageSettings, pairId)
+                else -> SettingsScreen(onStartLocation, onBackgroundLocation, onUsageSettings, pairId, onSignOut)
+            }
+        }
+        NavigationBar(containerColor = Panel, tonalElevation = 0.dp) {
+            listOf("Map", "Chat", "Activity", "Settings").forEach { item ->
+                NavigationBarItem(
+                    selected = tab == item,
+                    onClick = {
+                        val now = System.currentTimeMillis()
+                        if (tab == "Chat" && item != "Chat" && chatUnlocked) unlockUntil = now + 60_000L
+                        if (item == "Chat" && now > unlockUntil) chatUnlocked = false
+                        tab = item
+                    },
+                    icon = {
+                        Icon(when (item) {
+                            "Map" -> Icons.Default.Map
+                            "Chat" -> Icons.Default.Favorite
+                            "Activity" -> Icons.Default.PhoneAndroid
+                            else -> Icons.Default.Settings
+                        }, contentDescription = item)
+                    },
+                    label = { Text(item) },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = Pink, selectedTextColor = Pink,
+                        indicatorColor = Color(0xFF382437),
+                        unselectedIconColor = Muted, unselectedTextColor = Muted
+                    )
+                )
             }
         }
     }
 }
 
 @Composable
-private fun MapScreen(location: Pair<Double, Double>?, onStartLocation: () -> Unit, onRefresh: () -> Unit) {
+private fun MapScreen(
+    location: Pair<Double, Double>?,
+    partner: CloudLocation?,
+    partnerOnline: Boolean,
+    partnerBattery: Int,
+    partnerCharging: Boolean,
+    onStartLocation: () -> Unit,
+    onRefresh: () -> Unit,
+    onMissingYou: () -> Unit,
+    missingMessage: String
+) {
     Column(Modifier.fillMaxSize().padding(horizontal = 14.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("OUR MAP", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp)
-                Text("Your phone's location, on a real map", color = Muted, fontSize = 11.sp)
+                Text("OUR LIVE MAP", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                Text("Private location sharing between your two phones", color = Muted, fontSize = 11.sp)
             }
             FilledTonalButton(onClick = onRefresh) {
                 Icon(Icons.Default.MyLocation, null, modifier = Modifier.size(17.dp))
@@ -226,31 +326,62 @@ private fun MapScreen(location: Pair<Double, Double>?, onStartLocation: () -> Un
         }
         Spacer(Modifier.height(10.dp))
         Surface(Modifier.weight(1f).fillMaxWidth(), shape = RoundedCornerShape(22.dp), color = Panel) {
-            OpenStreetMap(location)
+            OpenStreetMap(location, partner)
         }
         Spacer(Modifier.height(10.dp))
         Surface(color = Panel, shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.LocationOn, null, tint = Pink)
-                    Spacer(Modifier.width(7.dp))
+                    Icon(Icons.Default.PersonPinCircle, null, tint = Pink)
+                    Spacer(Modifier.width(8.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(if (location == null) "Waiting for GPS fix" else "Your current location", color = Color.White, fontWeight = FontWeight.SemiBold)
+                        Text("You", color = Color.White, fontWeight = FontWeight.SemiBold)
+                        Text(if (location == null) "Waiting for GPS" else "Lat %.5f · Lon %.5f".format(location.first, location.second),
+                            color = Muted, fontSize = 10.sp)
+                    }
+                    Icon(if (location == null) Icons.Default.GpsNotFixed else Icons.Default.CheckCircle, null,
+                        tint = if (location == null) Muted else Green)
+                }
+                Divider(color = Color(0xFF303849))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Favorite, null, tint = Color(0xFF8FA9FF))
+                    Spacer(Modifier.width(8.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Your person", color = Color.White, fontWeight = FontWeight.SemiBold)
                         Text(
-                            if (location == null) "Tap Locate or enable location access."
-                            else "Lat " + "%.5f".format(location.first) + "  ·  Lon " + "%.5f".format(location.second),
-                            color = Muted, fontSize = 11.sp
+                            when {
+                                partner == null -> if (partnerOnline) "Online · waiting for location" else "Offline · last location not available"
+                                else -> "Lat %.5f · Lon %.5f · %s".format(partner.latitude, partner.longitude,
+                                    if (partnerOnline) "online" else "last known")
+                            },
+                            color = Muted, fontSize = 10.sp
                         )
                     }
-                    if (location != null) Icon(Icons.Default.CheckCircle, null, tint = Green)
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(if (partnerOnline) "ONLINE" else "OFFLINE", color = if (partnerOnline) Green else Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        if (partnerBattery >= 0) Text(partnerBattery.toString() + "%" + if (partnerCharging) " ⚡" else "", color = Muted, fontSize = 10.sp)
+                    }
                 }
-                Button(onClick = onStartLocation, modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Pink)) {
+                Button(
+                    onClick = onStartLocation,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Pink)
+                ) {
                     Icon(Icons.Default.GpsFixed, null, tint = Ink)
                     Spacer(Modifier.width(8.dp))
                     Text("Enable location collection", color = Ink, fontWeight = FontWeight.Bold)
                 }
-                Text("Map tiles © OpenStreetMap. The marker is local to this phone until private pairing and cloud sync are connected.", color = Muted, fontSize = 10.sp)
+                OutlinedButton(
+                    onClick = onMissingYou,
+                    enabled = !partnerOnline,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.FavoriteBorder, null, tint = Pink)
+                    Spacer(Modifier.width(7.dp))
+                    Text(if (partnerOnline) "Missing You (available when partner is offline)" else "Send Missing You")
+                }
+                if (missingMessage.isNotBlank()) Text(missingMessage, color = Pink, fontSize = 10.sp)
+                Text("GPS is shared only after permission and the location-sharing action. A disconnected phone shows its last synced point and time.", color = Muted, fontSize = 9.sp)
             }
         }
         Spacer(Modifier.height(8.dp))
@@ -258,7 +389,7 @@ private fun MapScreen(location: Pair<Double, Double>?, onStartLocation: () -> Un
 }
 
 @Composable
-private fun OpenStreetMap(location: Pair<Double, Double>?) {
+private fun OpenStreetMap(location: Pair<Double, Double>?, partner: CloudLocation?) {
     val context = LocalContext.current
     val mapView = remember {
         Configuration.getInstance().load(context, android.preference.PreferenceManager.getDefaultSharedPreferences(context))
@@ -267,34 +398,44 @@ private fun OpenStreetMap(location: Pair<Double, Double>?) {
             setTileSource(TileSourceFactory.MAPNIK)
             setMultiTouchControls(true)
             setBuiltInZoomControls(true)
-            controller.setZoom(if (location == null) 4.5 else 15.0)
-            controller.setCenter(if (location == null) GeoPoint(22.0, 79.0) else GeoPoint(location.first, location.second))
+            controller.setZoom(5.0)
+            controller.setCenter(if (location != null) GeoPoint(location.first, location.second)
+                else if (partner != null) GeoPoint(partner.latitude, partner.longitude) else GeoPoint(22.0, 79.0))
         }
     }
     DisposableEffect(mapView) {
         mapView.onResume()
-        onDispose {
-            mapView.onPause()
-            mapView.onDetach()
-        }
+        onDispose { mapView.onPause(); mapView.onDetach() }
     }
     AndroidView(factory = { mapView }, modifier = Modifier.fillMaxSize(), update = { view ->
-        if (location != null) {
+        val local = location
+        if (local != null) {
             val marker = view.overlays.filterIsInstance<Marker>().firstOrNull { it.title == "You" }
-            if (marker == null) {
-                view.overlays.add(Marker(view).apply {
-                    position = GeoPoint(location.first, location.second)
-                    title = "You"
-                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                })
-            } else marker.position = GeoPoint(location.first, location.second)
-
-            val key = location.first.toString() + "," + location.second.toString()
-            if (view.tag as? String != key) {
-                view.controller.animateTo(GeoPoint(location.first, location.second))
-                view.tag = key
-            }
-            view.invalidate()
+            val point = GeoPoint(local.first, local.second)
+            if (marker == null) view.overlays.add(Marker(view).apply {
+                position = point
+                title = "You"
+                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+            }) else marker.position = point
         }
+        if (partner != null) {
+            val marker = view.overlays.filterIsInstance<Marker>().firstOrNull { it.title == "Your person" }
+            val point = GeoPoint(partner.latitude, partner.longitude)
+            if (marker == null) view.overlays.add(Marker(view).apply {
+                position = point
+                title = "Your person"
+                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+            }) else marker.position = point
+        }
+        val localKey = local?.let { it.first.toString() + "," + it.second } ?: "none"
+        val partnerKey = partner?.let { it.latitude.toString() + "," + it.longitude } ?: "none"
+        val key = localKey + "|" + partnerKey
+        if (view.tag as? String != key) {
+            val focus = if (local != null) GeoPoint(local.first, local.second)
+                else if (partner != null) GeoPoint(partner.latitude, partner.longitude) else GeoPoint(22.0, 79.0)
+            view.controller.animateTo(focus)
+            view.tag = key
+        }
+        view.invalidate()
     })
 }
