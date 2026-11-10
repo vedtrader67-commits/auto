@@ -316,3 +316,152 @@ private fun PinGate(onUnlock: () -> Unit) {
         }
     }
 }
+
+@Composable
+fun AppLockScreen(onUnlocked: () -> Unit) {
+    val context = LocalContext.current
+    val activity = context as? FragmentActivity
+    var hasPin by remember { mutableStateOf(LocalStore.hasAppPin(context)) }
+    var confirming by remember { mutableStateOf(false) }
+    var firstPin by remember { mutableStateOf("") }
+    var secondPin by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf("") }
+    var fingerprintEnabled by remember { mutableStateOf(LocalStore.appBiometricEnabled(context)) }
+    val biometricAvailable = BiometricManager.from(context).canAuthenticate(
+        BiometricManager.Authenticators.BIOMETRIC_STRONG
+    ) == BiometricManager.BIOMETRIC_SUCCESS
+
+    fun unlockWithFingerprint() {
+        if (activity == null) {
+            error = "Fingerprint unlock is unavailable on this screen."
+            return
+        }
+        if (!biometricAvailable) {
+            error = "Set up a fingerprint in Android Settings first."
+            return
+        }
+        val executor = ContextCompat.getMainExecutor(context)
+        val prompt = BiometricPrompt(activity, executor, object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                onUnlocked()
+            }
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                error = errString.toString()
+            }
+            override fun onAuthenticationFailed() {
+                error = "Fingerprint not recognized. Try again or use your PIN."
+            }
+        })
+        val info = BiometricPrompt.PromptInfo.Builder()
+            .setTitle("Unlock LOCORA")
+            .setSubtitle("Authenticate with your fingerprint")
+            .setNegativeButtonText("Use PIN")
+            .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+            .build()
+        prompt.authenticate(info)
+    }
+
+    Surface(Modifier.fillMaxSize(), color = Color(0xFF0D1018)) {
+        Column(
+            Modifier.fillMaxSize().padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(Icons.Default.Lock, null, tint = Color(0xFFFF78B5), modifier = Modifier.size(48.dp))
+            Spacer(Modifier.height(12.dp))
+            Text("LOCORA APP LOCK", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Black)
+            Text(
+                if (hasPin) "Enter your app PIN to continue." else "Create a PIN to protect the whole app on this phone.",
+                color = Color(0xFFADB6C7), fontSize = 12.sp
+            )
+            Spacer(Modifier.height(18.dp))
+            if (!hasPin && confirming) {
+                OutlinedTextField(
+                    value = secondPin,
+                    onValueChange = { secondPin = it.filter(Char::isDigit).take(4); error = "" },
+                    label = { Text("Confirm 4-digit PIN") },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            } else {
+                OutlinedTextField(
+                    value = firstPin,
+                    onValueChange = { firstPin = it.filter(Char::isDigit).take(4); error = "" },
+                    label = { Text(if (hasPin) "4-digit app PIN" else "Create 4-digit PIN") },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            if (!hasPin && !confirming) {
+                Row(
+                    Modifier.fillMaxWidth().padding(top = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Enable fingerprint", color = Color.White, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            if (biometricAvailable) "Optional unlock after setup." else "Set up a fingerprint in Android Settings first.",
+                            color = Color(0xFFADB6C7), fontSize = 10.sp
+                        )
+                    }
+                    Switch(
+                        checked = fingerprintEnabled,
+                        enabled = biometricAvailable,
+                        onCheckedChange = { fingerprintEnabled = it }
+                    )
+                }
+            }
+            if (error.isNotBlank()) {
+                Spacer(Modifier.height(8.dp))
+                Text(error, color = Color(0xFFFF9494), fontSize = 11.sp)
+            }
+            Spacer(Modifier.height(14.dp))
+            Button(
+                onClick = {
+                    error = ""
+                    if (hasPin) {
+                        if (firstPin.length != 4) error = "Enter all 4 digits."
+                        else if (LocalStore.verifyAppPin(context, firstPin)) onUnlocked()
+                        else { error = "Incorrect PIN."; firstPin = "" }
+                    } else if (!confirming) {
+                        if (firstPin.length != 4) error = "Choose exactly 4 digits."
+                        else confirming = true
+                    } else {
+                        if (secondPin.length != 4) error = "Confirm all 4 digits."
+                        else if (firstPin != secondPin) {
+                            error = "PINs do not match."
+                            secondPin = ""
+                        } else {
+                            LocalStore.setAppPin(context, firstPin)
+                            LocalStore.setAppBiometricEnabled(context, fingerprintEnabled)
+                            hasPin = true
+                            onUnlocked()
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF78B5))
+            ) {
+                Text(
+                    when { hasPin -> "Unlock app"; confirming -> "Save app PIN"; else -> "Continue" },
+                    color = Color(0xFF0D1018), fontWeight = FontWeight.Bold
+                )
+            }
+            if (hasPin && LocalStore.appBiometricEnabled(context)) {
+                OutlinedButton(onClick = { unlockWithFingerprint() }, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.Fingerprint, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Unlock with fingerprint")
+                }
+            }
+            Text(
+                "The app PIN is stored locally as a salted hash. It is separate from your Chat PIN.",
+                color = Color(0xFFADB6C7), fontSize = 10.sp
+            )
+        }
+    }
+}
