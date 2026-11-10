@@ -93,6 +93,11 @@ class MainActivity : FragmentActivity() {
         signedInUser = FirebaseAuth.getInstance().currentUser
         activePairId = if (signedInUser == null) "" else CloudRepository.currentPairId(this)
         readCachedLocation()
+        if (signedInUser != null) {
+            CloudRepository.restorePair(this) { restored ->
+                if (!restored.isNullOrBlank()) activePairId = restored
+            }
+        }
         FirebaseAuth.getInstance().addAuthStateListener(authListener)
         setContent {
             MaterialTheme(colorScheme = darkColorScheme(
@@ -105,6 +110,9 @@ class MainActivity : FragmentActivity() {
                     signedInUser == null -> AccountScreen {
                         signedInUser = FirebaseAuth.getInstance().currentUser
                         activePairId = CloudRepository.currentPairId(this)
+                        CloudRepository.restorePair(this) { restored ->
+                            if (!restored.isNullOrBlank()) activePairId = restored
+                        }
                     }
                     activePairId.isBlank() -> PairingScreen(
                         onPaired = {
