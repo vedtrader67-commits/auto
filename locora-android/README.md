@@ -38,3 +38,6 @@ It builds `app-debug.apk` from this folder and uploads it as a workflow artifact
 - Notifications require notification permission and internet access.
 - Online presence can briefly be stale after abrupt network loss.
 - The app must not conceal tracking or bypass either person's sharing controls.
+
+
+Build workflow maintenance: SDK licence acceptance is handled in CI without treating the `yes` process's expected broken pipe as a build failure.
