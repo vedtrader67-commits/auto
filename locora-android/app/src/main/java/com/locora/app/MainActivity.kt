@@ -7,6 +7,8 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -33,6 +35,8 @@ import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.messaging.FirebaseMessaging
+import java.text.DateFormat
+import java.util.Date
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -50,6 +54,17 @@ class MainActivity : ComponentActivity() {
     private var signedInUser by mutableStateOf<FirebaseUser?>(null)
     private var activePairId by mutableStateOf("")
     private lateinit var fused: com.google.android.gms.location.FusedLocationProviderClient
+    private val presenceHandler = Handler(Looper.getMainLooper())
+    private val presenceHeartbeat = object : Runnable {
+        override fun run() {
+            if (activePairId.isNotBlank()) {
+                CloudRepository.setPresence(this@MainActivity, activePairId)
+                val battery = LocalStore.battery(this@MainActivity)
+                CloudRepository.updateBattery(this@MainActivity, activePairId, battery.percent, battery.charging)
+                presenceHandler.postDelayed(this, 30000L)
+            }
+        }
+    }
     private val authListener = FirebaseAuth.AuthStateListener { firebaseAuth ->
         signedInUser = firebaseAuth.currentUser
         activePairId = if (firebaseAuth.currentUser == null) "" else CloudRepository.currentPairId(this)
@@ -125,14 +140,18 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         if (::fused.isInitialized && hasLocationPermission()) refreshLocation()
-        if (activePairId.isNotBlank()) {
-            CloudRepository.setPresence(this, activePairId)
-            val battery = LocalStore.battery(this)
-            CloudRepository.updateBattery(this, activePairId, battery.percent, battery.charging)
-        }
+        presenceHandler.removeCallbacks(presenceHeartbeat)
+        if (activePairId.isNotBlank()) presenceHandler.post(presenceHeartbeat)
+    }
+
+    override fun onPause() {
+        presenceHandler.removeCallbacks(presenceHeartbeat)
+        if (activePairId.isNotBlank()) CloudRepository.setOffline(this, activePairId)
+        super.onPause()
     }
 
     override fun onDestroy() {
+        presenceHandler.removeCallbacks(presenceHeartbeat)
         FirebaseAuth.getInstance().removeAuthStateListener(authListener)
         super.onDestroy()
     }
@@ -241,7 +260,9 @@ private fun LocoraApp(
     val myUid = CloudRepository.currentUid().orEmpty()
     val partnerUid = members.firstOrNull { it != myUid }.orEmpty()
     val partnerPoint = locations.firstOrNull { it.uid == partnerUid }
-    val partnerOnline = presences.firstOrNull { it.uid == partnerUid }?.online == true
+    val partnerPresence = presences.firstOrNull { it.uid == partnerUid }
+    val partnerOnline = partnerPresence?.online == true
+    val partnerLastSeen = partnerPresence?.updatedAt ?: 0L
     val partnerBattery = batteries.firstOrNull { it.uid == partnerUid }
 
     Column(Modifier.fillMaxSize()) {
@@ -263,6 +284,7 @@ private fun LocoraApp(
                 "Map" -> MapScreen(
                     location, partnerPoint, partnerOnline,
                     partnerBattery?.percent ?: -1, partnerBattery?.charging ?: false,
+                    partnerLastSeen,
                     onStartLocation, onRefreshLocation,
                     onMissingYou = {
                         CloudRepository.sendMissingYou(context, pairId) { error ->
@@ -313,6 +335,7 @@ private fun MapScreen(
     partnerOnline: Boolean,
     partnerBattery: Int,
     partnerCharging: Boolean,
+    partnerLastSeen: Long,
     onStartLocation: () -> Unit,
     onRefresh: () -> Unit,
     onMissingYou: () -> Unit,
@@ -359,6 +382,8 @@ private fun MapScreen(
                                 partner == null -> if (partnerOnline) "Online · waiting for location" else "Offline · last location not available"
                                 else -> "Lat %.5f · Lon %.5f · %s".format(partner.latitude, partner.longitude,
                                     if (partnerOnline) "online" else "last known")
+                            } + if (!partnerOnline && partnerLastSeen > 0L) " · last seen " +
+                                DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(partnerLastSeen)) else ""
                             },
                             color = Muted, fontSize = 10.sp
                         )
