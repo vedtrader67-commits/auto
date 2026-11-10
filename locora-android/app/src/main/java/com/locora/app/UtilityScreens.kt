@@ -152,7 +152,7 @@ fun SettingsScreen(
                     onClick = { notifierStatus = CloudRepository.savePushServerUrl(context, notifierUrl) ?: "Notification server URL saved." },
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("Save notification server") }
-                if (notifierStatus.isNotBlank()) Text(notifierStatus, color = if (notifierStatus.contains("saved")) Green else Color(0xFFFF9494), fontSize = 10.sp)
+                if (notifierStatus.isNotBlank()) Text(notifierStatus, color = if (notifierStatus.contains("saved")) Color(0xFF67D6A2) else Color(0xFFFF9494), fontSize = 10.sp)
             }
         }
         Text("CONNECTED PRIVATE PAIR", color = ActivityPink, fontWeight = FontWeight.Bold, fontSize = 11.sp)
