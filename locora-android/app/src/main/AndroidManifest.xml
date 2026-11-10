@@ -16,6 +16,7 @@
         android:icon="@drawable/ic_locora_launcher"
         android:roundIcon="@drawable/ic_locora_launcher"
         android:label="LOCORA"
+        android:icon="@drawable/locora_logo"
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
         android:usesCleartextTraffic="false">
         <activity android:name=".MainActivity" android:exported="true">
