@@ -6,6 +6,13 @@ import android.content.Context
 import android.content.Intent
 import android.os.Process
 import android.util.Base64
+import android.graphics.Paint
+import android.graphics.pdf.PdfDocument
+import androidx.core.content.FileProvider
+import java.io.File
+import java.io.FileOutputStream
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 import org.json.JSONArray
 import org.json.JSONObject
 import java.security.SecureRandom
@@ -132,29 +139,98 @@ object LocalStore {
         return BatteryInfo(percent, charging)
     }
 
-    fun shareExport(context: Context, json: Boolean) {
+    fun shareExport(context: Context, json: Boolean) =
+        shareExport(context, if (json) "json" else "txt")
+
+    fun shareExport(context: Context, format: String) {
         val list = messages(context)
-        val text = if (json) {
-            val array = JSONArray()
+        val jsonText = JSONArray().apply {
             list.forEach {
-                array.put(JSONObject().put("id", it.id).put("body", it.body)
-                    .put("createdAt", it.createdAt).put("type", it.type).put("attachment", it.attachment))
+                put(JSONObject().put("id", it.id).put("sender", it.senderUid)
+                    .put("body", it.body).put("createdAt", it.createdAt)
+                    .put("type", it.type).put("attachment", it.attachment))
             }
-            array.toString(2)
-        } else {
-            list.joinToString("\n") {
-                val time = java.text.DateFormat.getDateTimeInstance().format(java.util.Date(it.createdAt))
-                "[$time] You: " + when (it.type) {
-                    "image" -> "Photo attached: " + it.attachment
-                    "voice" -> "Voice message: " + it.attachment
-                    else -> it.body
+        }.toString(2)
+        val txtText = list.joinToString("\n") {
+            val time = java.text.DateFormat.getDateTimeInstance().format(java.util.Date(it.createdAt))
+            val sender = if (it.senderUid.isBlank()) "You" else if (it.senderUid == "partner") "Partner" else it.senderUid
+            "[$time] $sender: " + when (it.type) {
+                "image" -> "Photo attached"
+                "voice" -> "Voice message"
+                else -> it.body
+            }
+        }.ifBlank { "No messages yet." }
+
+        val exportDir = File(context.cacheDir, "exports").apply { mkdirs() }
+        val name = "locora-chat-" + System.currentTimeMillis()
+        val file = when (format.lowercase()) {
+            "json" -> File(exportDir, "$name.json").apply { writeText(jsonText) }
+            "pdf" -> {
+                val pdf = PdfDocument()
+                val paint = Paint().apply { textSize = 12f; color = android.graphics.Color.BLACK; isAntiAlias = true }
+                val lines = txtText.lines().flatMap { line ->
+                    if (line.length <= 84) listOf(line) else line.chunked(84)
                 }
+                var pageNumber = 1
+                var page = pdf.startPage(PdfDocument.PageInfo.Builder(595, 842, pageNumber).create())
+                var y = 42f
+                lines.forEach { line ->
+                    if (y > 800f) {
+                        pdf.finishPage(page)
+                        pageNumber++
+                        page = pdf.startPage(PdfDocument.PageInfo.Builder(595, 842, pageNumber).create())
+                        y = 42f
+                    }
+                    page.canvas.drawText(line, 36f, y, paint)
+                    y += 18f
+                }
+                pdf.finishPage(page)
+                val out = File(exportDir, "$name.pdf")
+                FileOutputStream(out).use { pdf.writeTo(it) }
+                pdf.close()
+                out
             }
+            "zip" -> {
+                val out = File(exportDir, "$name.zip")
+                ZipOutputStream(FileOutputStream(out)).use { zip ->
+                    zip.putNextEntry(ZipEntry("chat.txt"))
+                    zip.write(txtText.toByteArray(Charsets.UTF_8))
+                    zip.closeEntry()
+                    zip.putNextEntry(ZipEntry("chat.json"))
+                    zip.write(jsonText.toByteArray(Charsets.UTF_8))
+                    zip.closeEntry()
+                    list.forEach { message ->
+                        if (message.attachment.isBlank()) return@forEach
+                        try {
+                            val input = if (message.attachment.startsWith("content://")) {
+                                context.contentResolver.openInputStream(android.net.Uri.parse(message.attachment))
+                            } else File(message.attachment).takeIf { it.isFile }?.inputStream()
+                            input?.use { stream ->
+                                val ext = if (message.type == "voice") "m4a" else "jpg"
+                                zip.putNextEntry(ZipEntry("media/" + message.id + "." + ext))
+                                stream.copyTo(zip)
+                                zip.closeEntry()
+                            }
+                        } catch (_: Exception) { }
+                    }
+                }
+                out
+            }
+            else -> File(exportDir, "$name.txt").apply { writeText(txtText) }
         }
+
+        val mime = when (format.lowercase()) {
+            "json" -> "application/json"
+            "pdf" -> "application/pdf"
+            "zip" -> "application/zip"
+            else -> "text/plain"
+        }
+        val uri = FileProvider.getUriForFile(context, context.packageName + ".fileprovider", file)
         val send = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_SUBJECT, if (json) "LOCORA chat backup (JSON)" else "LOCORA chat export")
-            putExtra(Intent.EXTRA_TEXT, text.ifBlank { "No messages yet." })
+            type = mime
+            putExtra(Intent.EXTRA_SUBJECT, "LOCORA chat export")
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         context.startActivity(Intent.createChooser(send, "Export LOCORA chat"))
     }
