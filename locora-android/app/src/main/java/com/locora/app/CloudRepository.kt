@@ -2,6 +2,10 @@ package com.locora.app
 
 import android.content.Context
 import android.util.Base64
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
+import java.io.ByteArrayOutputStream
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
 import java.security.SecureRandom
@@ -22,6 +26,8 @@ data class CloudLocation(
     val longitude: Double,
     val updatedAt: Long
 )
+
+data class CloudPresence(val uid: String, val online: Boolean, val updatedAt: Long)
 
 object CloudRepository {
     private const val PREFS = "locora_local"
@@ -222,6 +228,60 @@ object CloudRepository {
         }
         ref.addValueEventListener(listener)
         return listener
+    }
+
+
+    fun listenPresence(context: Context, pairId: String, callback: (List<CloudPresence>) -> Unit): ValueEventListener {
+        val ref = root(context).child("pairs").child(pairId).child("presence")
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                callback(snapshot.children.map { child ->
+                    CloudPresence(
+                        child.key.orEmpty(),
+                        child.child("state").getValue(String::class.java) == "online",
+                        child.child("updatedAt").getValue(Long::class.java) ?: 0L
+                    )
+                })
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        }
+        ref.addValueEventListener(listener)
+        return listener
+    }
+
+    fun removePresenceListener(context: Context, pairId: String, listener: ValueEventListener) {
+        root(context).child("pairs").child(pairId).child("presence").removeEventListener(listener)
+    }
+
+    fun removeLocationsListener(context: Context, pairId: String, listener: ValueEventListener) {
+        root(context).child("pairs").child(pairId).child("locations").removeEventListener(listener)
+    }
+
+    fun encodePhoto(context: Context, uri: Uri): String? {
+        return try {
+            val original = context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
+                ?: return null
+            val maxSide = 1280
+            val ratio = minOf(1f, maxSide.toFloat() / maxOf(original.width, original.height))
+            val scaled = if (ratio < 1f) Bitmap.createScaledBitmap(
+                original, (original.width * ratio).toInt().coerceAtLeast(1),
+                (original.height * ratio).toInt().coerceAtLeast(1), true
+            ) else original
+            var quality = 76
+            var bytes: ByteArray
+            do {
+                val stream = ByteArrayOutputStream()
+                scaled.compress(Bitmap.CompressFormat.JPEG, quality, stream)
+                bytes = stream.toByteArray()
+                quality -= 8
+            } while (bytes.size > 650_000 && quality >= 44)
+            if (bytes.size > 800_000) null else Base64.encodeToString(bytes, Base64.NO_WRAP)
+        } catch (_: Exception) { null }
+    }
+
+    fun encodeAudio(fileBytes: ByteArray): String? {
+        if (fileBytes.isEmpty() || fileBytes.size > 700_000) return null
+        return Base64.encodeToString(fileBytes, Base64.NO_WRAP)
     }
 
     fun updateBattery(context: Context, pairId: String, percent: Int, charging: Boolean) {
