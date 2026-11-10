@@ -41,7 +41,6 @@ object CloudRepository {
     private const val PREFS = "locora_local"
     private const val PAIR_KEY = "cloud_pair_id"
     private const val DB_URL_KEY = "cloud_database_url"
-    private const val DEFAULT_DATABASE_URL = "https://lacora-fd114-default-rtdb.firebaseio.com"
     private val random = SecureRandom()
     private val networkExecutor = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -54,7 +53,7 @@ object CloudRepository {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(PAIR_KEY, "").orEmpty()
 
     fun databaseUrl(context: Context): String =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(DB_URL_KEY, DEFAULT_DATABASE_URL).orEmpty()
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(DB_URL_KEY, "").orEmpty()
 
     fun saveDatabaseUrl(context: Context, url: String, done: (String?) -> Unit) {
         val normalized = url.trim().trimEnd('/')
@@ -80,7 +79,8 @@ object CloudRepository {
         synchronized(this) {
             cachedDb?.let { return it }
             val url = databaseUrl(context)
-            val instance = if (url.isNotBlank()) FirebaseDatabase.getInstance(url) else FirebaseDatabase.getInstance()
+            if (url.isBlank()) throw IllegalStateException("Create Realtime Database in Firebase Console and paste its URL first.")
+            val instance = FirebaseDatabase.getInstance(url)
             try { instance.setPersistenceEnabled(true) } catch (_: Exception) { }
             cachedDb = instance
             return instance
