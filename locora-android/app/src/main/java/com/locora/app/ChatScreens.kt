@@ -39,10 +39,14 @@ private val ChatPink = Color(0xFFFF78B5)
 private val ChatMuted = Color(0xFFADB6C7)
 
 @Composable
-fun ChatScreen(unlocked: Boolean, onUnlock: () -> Unit) {
+fun ChatScreen(unlocked: Boolean, onUnlock: () -> Unit, pairId: String = "") {
     val context = LocalContext.current
     if (!unlocked) {
         PinGate(onUnlock)
+        return
+    }
+    if (pairId.isNotBlank()) {
+        CloudChatScreen(pairId)
         return
     }
 
