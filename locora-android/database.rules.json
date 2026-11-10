@@ -18,7 +18,7 @@
         },
         "members": {
           "$uid": {
-            ".write": "auth != null && auth.uid == $uid && !data.exists() && newData.exists() && ((root.child('pairs').child($pairId).child('meta').child('createdBy').val() == auth.uid && !newData.hasChild('inviteCode')) || (root.child('pairs').child($pairId).child('members').numChildren() == 1 && root.child('pairs').child($pairId).child('members').child(root.child('pairs').child($pairId).child('meta').child('createdBy').val()).exists() && newData.child('inviteCode').isString() && root.child('pairInvites').child(newData.child('inviteCode').val()).child('pairId').val() == $pairId && root.child('pairInvites').child(newData.child('inviteCode').val()).child('usedBy').val() == auth.uid))",
+            ".write": "auth != null && auth.uid == $uid && ((data.exists() && !newData.exists()) || (!data.exists() && newData.exists() && ((root.child('pairs').child($pairId).child('meta').child('createdBy').val() == auth.uid && !newData.hasChild('inviteCode')) || (root.child('pairs').child($pairId).child('members').numChildren() == 1 && root.child('pairs').child($pairId).child('members').child(root.child('pairs').child($pairId).child('meta').child('createdBy').val()).exists() && newData.child('inviteCode').isString() && root.child('pairInvites').child(newData.child('inviteCode').val()).child('pairId').val() == $pairId && root.child('pairInvites').child(newData.child('inviteCode').val()).child('usedBy').val() == auth.uid))))",
             ".validate": "newData.hasChildren(['uid','role','joinedAt']) && newData.child('uid').val() == auth.uid && newData.child('joinedAt').isNumber() && (newData.child('role').val() == 'owner' || newData.child('role').val() == 'partner')"
           }
         },
@@ -30,7 +30,7 @@
         },
         "locations": {
           "$uid": {
-            ".write": "auth != null && auth.uid == $uid && root.child('pairs').child($pairId).child('members').child(auth.uid).exists() && root.child('pairs').child($pairId).child('locationConsent').child(auth.uid).val() == true",
+            ".write": "auth != null && auth.uid == $uid && root.child('pairs').child($pairId).child('members').child(auth.uid).exists() && (!newData.exists() || root.child('pairs').child($pairId).child('locationConsent').child(auth.uid).val() == true)",
             ".validate": "newData.hasChildren(['latitude','longitude','updatedAt']) && newData.child('latitude').isNumber() && newData.child('longitude').isNumber()"
           }
         },
