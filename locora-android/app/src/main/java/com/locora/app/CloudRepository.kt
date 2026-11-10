@@ -202,6 +202,15 @@ object CloudRepository {
         }
     }
 
+
+    fun saveFcmToken(context: Context, pairId: String, token: String) {
+        val uid = currentUid() ?: return
+        if (token.isBlank()) return
+        root(context).child("userTokens").child(uid).setValue(
+            mapOf("pairId" to pairId, "token" to token, "updatedAt" to ServerValue.TIMESTAMP)
+        )
+    }
+
     fun setPresence(context: Context, pairId: String) {
         val uid = currentUid() ?: return
         val ref = root(context).child("pairs").child(pairId).child("presence").child(uid)
