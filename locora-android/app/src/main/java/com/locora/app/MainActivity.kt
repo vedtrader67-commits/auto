@@ -146,7 +146,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause() {
         presenceHandler.removeCallbacks(presenceHeartbeat)
-        if (activePairId.isNotBlank()) CloudRepository.setOffline(this, activePairId)
         super.onPause()
     }
 
@@ -261,8 +260,9 @@ private fun LocoraApp(
     val partnerUid = members.firstOrNull { it != myUid }.orEmpty()
     val partnerPoint = locations.firstOrNull { it.uid == partnerUid }
     val partnerPresence = presences.firstOrNull { it.uid == partnerUid }
-    val partnerOnline = partnerPresence?.online == true
     val partnerLastSeen = partnerPresence?.updatedAt ?: 0L
+    val partnerOnline = partnerPresence?.online == true &&
+        partnerLastSeen > 0L && System.currentTimeMillis() - partnerLastSeen < 120000L
     val partnerBattery = batteries.firstOrNull { it.uid == partnerUid }
 
     Column(Modifier.fillMaxSize()) {
@@ -288,7 +288,7 @@ private fun LocoraApp(
                     onStartLocation, onRefreshLocation,
                     onMissingYou = {
                         CloudRepository.sendMissingYou(context, pairId) { error ->
-                            missingMessage = error ?: "Missing You signal saved. Their phone can receive it when it reconnects."
+                            missingMessage = error ?: "Missing You notification accepted by Firebase."
                         }
                     },
                     missingMessage = missingMessage
