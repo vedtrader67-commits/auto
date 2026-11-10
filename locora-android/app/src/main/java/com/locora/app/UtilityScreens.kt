@@ -24,7 +24,7 @@ private val ActivityPink = Color(0xFFFF78B5)
 private val ActivityMuted = Color(0xFFADB6C7)
 
 @Composable
-fun ActivityScreen(onUsageSettings: () -> Unit) {
+fun ActivityScreen(onUsageSettings: () -> Unit, pairId: String) {
     val context = LocalContext.current
     var refresh by remember { mutableIntStateOf(0) }
     var share by remember {
@@ -32,6 +32,9 @@ fun ActivityScreen(onUsageSettings: () -> Unit) {
             .getBoolean("share_my_activity", false))
     }
     val recent = remember(refresh) { LocalStore.recentApps(context) }
+    LaunchedEffect(refresh, share, pairId) {
+        if (share && pairId.isNotBlank()) CloudRepository.publishActivity(context, pairId, recent)
+    }
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
@@ -49,6 +52,7 @@ fun ActivityScreen(onUsageSettings: () -> Unit) {
                         share = it
                         context.getSharedPreferences("locora_local", Context.MODE_PRIVATE)
                             .edit().putBoolean("share_my_activity", it).apply()
+                        CloudRepository.setActivityConsent(context, pairId, it)
                     })
                 }
                 Button(onClick = onUsageSettings, modifier = Modifier.fillMaxWidth()) {
@@ -88,7 +92,9 @@ fun ActivityScreen(onUsageSettings: () -> Unit) {
 fun SettingsScreen(
     onStartLocation: () -> Unit,
     onBackgroundLocation: () -> Unit,
-    onUsageSettings: () -> Unit
+    onUsageSettings: () -> Unit,
+    pairId: String,
+    onSignOut: () -> Unit
 ) {
     val context = LocalContext.current
     var refreshBattery by remember { mutableIntStateOf(0) }
@@ -128,6 +134,15 @@ fun SettingsScreen(
             Text("Open Usage Access settings")
         }
         InfoCard("Chat lock", "A four-digit PIN protects chat on this device. The PIN is stored as a salted PBKDF2 hash.")
+        Text("CONNECTED PRIVATE PAIR", color = ActivityPink, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+        Surface(color = ActivityPanel, shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text("Signed in as " + CloudRepository.currentEmail(), color = Color.White, fontWeight = FontWeight.SemiBold)
+                Text("Pair ID: " + pairId.take(8) + "…", color = ActivityMuted, fontSize = 10.sp)
+                Text("Location, presence, battery, chat and consented activity sync through your Firebase Realtime Database.", color = ActivityMuted, fontSize = 11.sp)
+                OutlinedButton(onClick = onSignOut, modifier = Modifier.fillMaxWidth()) { Text("Sign out of LOCORA") }
+            }
+        }
         Text("CHAT BACKUP", color = ActivityPink, fontWeight = FontWeight.Bold, fontSize = 11.sp)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = { LocalStore.shareExport(context, false) }, modifier = Modifier.weight(1f)) {
