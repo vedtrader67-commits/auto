@@ -213,6 +213,23 @@ object CloudRepository {
         if (!enabled) root(context).child("pairs").child(pairId).child("locations").child(uid).removeValue()
     }
 
+
+    fun listenMembers(context: Context, pairId: String, callback: (List<String>) -> Unit): ValueEventListener {
+        val ref = root(context).child("pairs").child(pairId).child("members")
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                callback(snapshot.children.mapNotNull { it.key })
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        }
+        ref.addValueEventListener(listener)
+        return listener
+    }
+
+    fun removeMembersListener(context: Context, pairId: String, listener: ValueEventListener) {
+        root(context).child("pairs").child(pairId).child("members").removeEventListener(listener)
+    }
+
     fun listenLocations(context: Context, pairId: String, callback: (List<CloudLocation>) -> Unit): ValueEventListener {
         val ref = root(context).child("pairs").child(pairId).child("locations")
         val listener = object : ValueEventListener {
