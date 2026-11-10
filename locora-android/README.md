@@ -3,7 +3,7 @@
 Native Android project for a private two-person couple location and chat app.
 
 ## Project status
-This branch contains the first native Android scaffold and a working foreground GPS collection service. The service caches the latest GPS coordinates locally and shows Android's persistent location-sharing notification.
+This branch now builds a native Android app with an OpenStreetMap map view, current-device GPS marker and foreground GPS collection; on-device PIN-protected chat with saved text, photo and recorded voice notes; chat TXT/JSON export; battery status; and consent-based recent-app usage display. Remote two-phone sync still requires a configured backend.
 
 ## Features specified
 - Two-person private account pairing
