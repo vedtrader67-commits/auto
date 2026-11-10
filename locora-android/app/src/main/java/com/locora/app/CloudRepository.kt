@@ -489,6 +489,44 @@ object CloudRepository {
         }
     }
 
+
+    fun listenActivityConsent(context: Context, pairId: String, partnerUid: String, callback: (Boolean) -> Unit): ValueEventListener {
+        val ref = root(context).child("pairs").child(pairId).child("activityConsent").child(partnerUid)
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                callback(snapshot.getValue(Boolean::class.java) ?: false)
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        }
+        ref.addValueEventListener(listener)
+        return listener
+    }
+
+    fun removeActivityConsentListener(context: Context, pairId: String, partnerUid: String, listener: ValueEventListener) {
+        root(context).child("pairs").child(pairId).child("activityConsent").child(partnerUid).removeEventListener(listener)
+    }
+
+    fun listenActivity(context: Context, pairId: String, partnerUid: String, callback: (List<RecentApp>) -> Unit): ValueEventListener {
+        val ref = root(context).child("pairs").child(pairId).child("activity").child(partnerUid)
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                callback(snapshot.children.mapNotNull { item ->
+                    val label = item.child("label").getValue(String::class.java) ?: return@mapNotNull null
+                    val packageName = item.child("packageName").getValue(String::class.java).orEmpty()
+                    val lastUsed = item.child("lastUsed").getValue(Long::class.java) ?: 0L
+                    RecentApp(label, packageName, lastUsed)
+                }.take(5))
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        }
+        ref.addValueEventListener(listener)
+        return listener
+    }
+
+    fun removeActivityListener(context: Context, pairId: String, partnerUid: String, listener: ValueEventListener) {
+        root(context).child("pairs").child(pairId).child("activity").child(partnerUid).removeEventListener(listener)
+    }
+
     fun publishActivity(context: Context, pairId: String, apps: List<RecentApp>) {
         val uid = currentUid() ?: return
         val enabled = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
