@@ -8,6 +8,10 @@ import android.media.MediaRecorder
 import android.net.Uri
 import android.os.Build
 import android.widget.ImageView
+import androidx.activity.ComponentActivity
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
+import androidx.core.content.ContextCompat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -31,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import java.io.File
+import java.util.concurrent.Executor
 import java.text.DateFormat
 import java.util.Date
 
@@ -222,10 +227,40 @@ fun ChatScreen(unlocked: Boolean, onUnlock: () -> Unit, pairId: String = "") {
 private fun PinGate(onUnlock: () -> Unit) {
     val context = LocalContext.current
     val hasPin = remember { LocalStore.hasPin(context) }
+    var biometricEnabled by remember { mutableStateOf(LocalStore.biometricEnabled(context)) }
     var first by remember { mutableStateOf("") }
     var second by remember { mutableStateOf("") }
     var error by remember { mutableStateOf("") }
     var confirming by remember { mutableStateOf(false) }
+
+    fun unlockWithBiometric() {
+        val activity = context as? ComponentActivity
+        if (activity == null) { error = "Biometric unlock is unavailable here."; return }
+        val manager = BiometricManager.from(context)
+        if (manager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) != BiometricManager.BIOMETRIC_SUCCESS) {
+            error = "Set up a fingerprint in Android Settings first."
+            return
+        }
+        val executor: Executor = ContextCompat.getMainExecutor(context)
+        val prompt = BiometricPrompt(activity, executor, object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                onUnlock()
+            }
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                error = errString.toString()
+            }
+            override fun onAuthenticationFailed() {
+                error = "Fingerprint not recognized. Try again or use your PIN."
+            }
+        })
+        val info = BiometricPrompt.PromptInfo.Builder()
+            .setTitle("Unlock LOCORA chat")
+            .setSubtitle("Verify your fingerprint")
+            .setNegativeButtonText("Use PIN")
+            .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+            .build()
+        prompt.authenticate(info)
+    }
 
     Column(
         Modifier.fillMaxSize().padding(28.dp),
@@ -255,6 +290,13 @@ private fun PinGate(onUnlock: () -> Unit) {
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword)
             )
+        }
+        if (hasPin && biometricEnabled) {
+            OutlinedButton(onClick = { unlockWithBiometric() }, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.Fingerprint, null, tint = ChatPink)
+                Spacer(Modifier.width(7.dp))
+                Text("Unlock with fingerprint")
+            }
         }
         if (error.isNotBlank()) Text(error, color = Color(0xFFFF8A8A), fontSize = 12.sp)
         Spacer(Modifier.height(12.dp))
