@@ -53,6 +53,7 @@ class MainActivity : FragmentActivity() {
     private var currentPoint by mutableStateOf<Pair<Double, Double>?>(null)
     private var signedInUser by mutableStateOf<FirebaseUser?>(null)
     private var activePairId by mutableStateOf("")
+    private var appUnlocked by mutableStateOf(false)
     private lateinit var fused: com.google.android.gms.location.FusedLocationProviderClient
     private val presenceHandler = Handler(Looper.getMainLooper())
     private val presenceHeartbeat = object : Runnable {
@@ -98,7 +99,9 @@ class MainActivity : FragmentActivity() {
                 primary = Pink, secondary = Green, background = Ink, surface = Panel,
                 onPrimary = Ink, onBackground = Color.White, onSurface = Color.White
             )) {
-                when {
+                if (!appUnlocked) {
+                    AppLockScreen { appUnlocked = true }
+                } else when {
                     signedInUser == null -> AccountScreen {
                         signedInUser = FirebaseAuth.getInstance().currentUser
                         activePairId = CloudRepository.currentPairId(this)
@@ -128,12 +131,10 @@ class MainActivity : FragmentActivity() {
                         onBackgroundLocation = { requestBackgroundLocation() },
                         onUsageSettings = { startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) },
                         onSignOut = {
-                            CloudRepository.leavePair(this) {
-                                stopService(Intent(this, LocationTrackerService::class.java))
-                                FirebaseAuth.getInstance().signOut()
-                                signedInUser = null
-                                activePairId = ""
-                            }
+                            stopService(Intent(this, LocationTrackerService::class.java))
+                            FirebaseAuth.getInstance().signOut()
+                            signedInUser = null
+                            activePairId = ""
                         }
                     )
                 }
@@ -150,9 +151,30 @@ class MainActivity : FragmentActivity() {
             prefs.edit().putBoolean("notification_permission_prompted", true).apply()
             notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
+        val backgroundAt = prefs.getLong("app_background_at", 0L)
+        if (backgroundAt > 0L) {
+            if (System.currentTimeMillis() - backgroundAt >= 60_000L) appUnlocked = false
+            prefs.edit().remove("app_background_at").apply()
+        }
         if (::fused.isInitialized && hasLocationPermission()) refreshLocation()
+        if (activePairId.isNotBlank()) {
+            CloudRepository.setPresence(this, activePairId)
+            val battery = LocalStore.battery(this)
+            CloudRepository.updateBattery(this, activePairId, battery.percent, battery.charging)
+            if (prefs.getBoolean("cloud_location_consent", false) && hasLocationPermission()) {
+                startLocationService()
+            }
+        }
         presenceHandler.removeCallbacks(presenceHeartbeat)
         if (activePairId.isNotBlank()) presenceHandler.post(presenceHeartbeat)
+    }
+
+    override fun onStop() {
+        if (!isChangingConfigurations) {
+            getSharedPreferences("locora_local", Context.MODE_PRIVATE).edit()
+                .putLong("app_background_at", System.currentTimeMillis()).apply()
+        }
+        super.onStop()
     }
 
     override fun onPause() {
