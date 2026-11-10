@@ -76,6 +76,43 @@ object LocalStore {
         return message
     }
 
+
+    fun addSyncedMessage(context: Context, message: CloudMessage) {
+        val list = messages(context)
+        if (list.any { it.id == message.id }) return
+        var localAttachment = ""
+        if (message.attachment.isNotBlank() && (message.type == "image" || message.type == "voice")) {
+            try {
+                val bytes = Base64.decode(message.attachment, Base64.NO_WRAP)
+                val dir = File(context.filesDir, "locora_media").apply { mkdirs() }
+                val ext = if (message.type == "voice") "m4a" else "jpg"
+                val file = File(dir, message.id + "." + ext)
+                file.writeBytes(bytes)
+                localAttachment = file.absolutePath
+            } catch (_: Exception) { }
+        }
+        val who = if (message.senderUid == CloudRepository.currentUid()) "You" else "Partner"
+        list += ChatMessage(
+            id = message.id,
+            body = message.body,
+            createdAt = message.createdAt,
+            type = message.type,
+            attachment = localAttachment,
+            senderUid = who
+        )
+        persistMessages(context, list)
+    }
+
+    private fun persistMessages(context: Context, list: List<ChatMessage>) {
+        val array = JSONArray()
+        list.forEach { item ->
+            array.put(JSONObject().put("id", item.id).put("body", item.body)
+                .put("createdAt", item.createdAt).put("type", item.type)
+                .put("attachment", item.attachment).put("senderUid", item.senderUid))
+        }
+        prefs(context).edit().putString(MSG_KEY, array.toString()).apply()
+    }
+
     fun hasPin(context: Context): Boolean = prefs(context).contains("chat_pin_hash")
 
     fun setPin(context: Context, pin: String) {
