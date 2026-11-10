@@ -229,6 +229,14 @@ object CloudRepository {
         } catch (_: Exception) { }
     }
 
+
+    fun setOffline(context: Context, pairId: String) {
+        val uid = currentUid() ?: return
+        root(context).child("pairs").child(pairId).child("presence").child(uid).setValue(
+            mapOf("state" to "offline", "updatedAt" to ServerValue.TIMESTAMP)
+        )
+    }
+
     fun publishLocation(context: Context, pairId: String, latitude: Double, longitude: Double) {
         val uid = currentUid() ?: return
         val consent = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean("cloud_location_consent", false)
