@@ -115,6 +115,35 @@ object LocalStore {
 
     fun hasPin(context: Context): Boolean = prefs(context).contains("chat_pin_hash")
 
+    fun hasAppPin(context: Context): Boolean = prefs(context).contains("app_pin_hash")
+
+    fun setAppPin(context: Context, pin: String) {
+        val salt = ByteArray(16).also { SecureRandom().nextBytes(it) }
+        val hash = derive(pin, salt)
+        prefs(context).edit()
+            .putString("app_pin_salt", Base64.encodeToString(salt, Base64.NO_WRAP))
+            .putString("app_pin_hash", Base64.encodeToString(hash, Base64.NO_WRAP))
+            .apply()
+    }
+
+    fun verifyAppPin(context: Context, pin: String): Boolean {
+        val p = prefs(context)
+        val saltText = p.getString("app_pin_salt", null) ?: return false
+        val hashText = p.getString("app_pin_hash", null) ?: return false
+        return try {
+            val expected = Base64.decode(hashText, Base64.NO_WRAP)
+            val actual = derive(pin, Base64.decode(saltText, Base64.NO_WRAP))
+            java.security.MessageDigest.isEqual(expected, actual)
+        } catch (_: Exception) { false }
+    }
+
+    fun appBiometricEnabled(context: Context): Boolean =
+        prefs(context).getBoolean("app_biometric_enabled", false)
+
+    fun setAppBiometricEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean("app_biometric_enabled", enabled).apply()
+    }
+
     fun biometricEnabled(context: Context): Boolean =
         prefs(context).getBoolean("chat_biometric_enabled", false)
 
