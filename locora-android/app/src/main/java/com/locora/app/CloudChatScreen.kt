@@ -56,6 +56,9 @@ fun CloudChatScreen(pairId: String) {
     var recorder by remember { mutableStateOf<MediaRecorder?>(null) }
     var recordFile by remember { mutableStateOf<File?>(null) }
     var sending by remember { mutableStateOf(false) }
+    var partnerUid by remember { mutableStateOf("") }
+    var partnerTyping by remember { mutableStateOf(false) }
+    val myUid = CloudRepository.currentUid().orEmpty()
 
     DisposableEffect(pairId) {
         val listener: ValueEventListener = CloudRepository.listenMessages(context, pairId) { data ->
@@ -63,11 +66,25 @@ fun CloudChatScreen(pairId: String) {
             messages.addAll(data)
             data.forEach { LocalStore.addSyncedMessage(context, it) }
         }
+        val membersListener = CloudRepository.listenMembers(context, pairId) { ids ->
+            partnerUid = ids.firstOrNull { it != myUid }.orEmpty()
+        }
         onDispose {
             CloudRepository.removeMessagesListener(context, pairId, listener)
+            CloudRepository.removeMembersListener(context, pairId, membersListener)
             CloudRepository.setTyping(context, pairId, false)
             try { if (recording) recorder?.stop() } catch (_: Exception) {}
             try { recorder?.release() } catch (_: Exception) {}
+        }
+    }
+
+    DisposableEffect(pairId, partnerUid) {
+        if (partnerUid.isBlank()) {
+            partnerTyping = false
+            onDispose { }
+        } else {
+            val typingListener = CloudRepository.listenTyping(context, pairId, partnerUid) { partnerTyping = it }
+            onDispose { CloudRepository.removeTypingListener(context, pairId, partnerUid, typingListener) }
         }
     }
 
@@ -180,16 +197,22 @@ fun CloudChatScreen(pairId: String) {
                                 }
                                 else -> Text(msg.body, color = Color.White)
                             }
-                            Text(
-                                DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(msg.createdAt)) +
-                                    if (mine) "  ✓" else "",
-                                color = CloudChatMuted, fontSize = 9.sp, modifier = Modifier.align(Alignment.End)
-                            )
+                            Row(Modifier.align(Alignment.End), verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(msg.createdAt)),
+                                    color = CloudChatMuted, fontSize = 9.sp
+                                )
+                                if (mine && partnerUid.isNotBlank()) {
+                                    Spacer(Modifier.width(5.dp))
+                                    ReadReceiptLabel(pairId, msg.id, partnerUid)
+                                }
+                            }
                         }
                     }
                 }
             }
         }
+        if (partnerTyping) Text("Your person is typing…", color = CloudChatPink, fontSize = 10.sp)
         if (error.isNotBlank()) Text(error, color = Color(0xFFFF8A8A), fontSize = 10.sp)
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { photoPicker.launch(arrayOf("image/*")) }, enabled = !sending) {
@@ -258,6 +281,18 @@ fun CloudChatScreen(pairId: String) {
         if (sending) Text("Syncing message…", color = CloudChatMuted, fontSize = 9.sp)
         Spacer(Modifier.height(6.dp))
     }
+}
+
+
+@Composable
+private fun ReadReceiptLabel(pairId: String, messageId: String, partnerUid: String) {
+    val context = LocalContext.current
+    var read by remember(messageId, partnerUid) { mutableStateOf(false) }
+    DisposableEffect(pairId, messageId, partnerUid) {
+        val listener = CloudRepository.listenReadReceipt(context, pairId, messageId, partnerUid) { read = it }
+        onDispose { CloudRepository.removeReadReceiptListener(context, pairId, messageId, partnerUid, listener) }
+    }
+    Text(if (read) "✓✓ Read" else "✓ Sent", color = if (read) CloudChatPink else CloudChatMuted, fontSize = 9.sp)
 }
 
 @Composable
