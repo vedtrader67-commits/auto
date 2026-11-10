@@ -61,6 +61,7 @@ fun CloudChatScreen(pairId: String) {
         val listener: ValueEventListener = CloudRepository.listenMessages(context, pairId) { data ->
             messages.clear()
             messages.addAll(data)
+            data.forEach { LocalStore.addSyncedMessage(context, it) }
         }
         onDispose {
             CloudRepository.removeMessagesListener(context, pairId, listener)
