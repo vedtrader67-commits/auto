@@ -10,7 +10,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
-import androidx.activity.ComponentActivity
+import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -49,7 +49,7 @@ private val Pink = Color(0xFFFF78B5)
 private val Muted = Color(0xFFADB6C7)
 private val Green = Color(0xFF67D6A2)
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
     private var currentPoint by mutableStateOf<Pair<Double, Double>?>(null)
     private var signedInUser by mutableStateOf<FirebaseUser?>(null)
     private var activePairId by mutableStateOf("")
