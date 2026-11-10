@@ -1,0 +1,90 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "pairInvites": {
+      "$code": {
+        ".read": "auth != null && data.exists() && data.child('createdBy').val() != auth.uid && data.child('usedBy').val() == '' && data.child('expiresAt').val() > now",
+        ".write": "auth != null && ((!data.exists() && newData.exists() && newData.child('createdBy').val() == auth.uid && newData.child('usedBy').val() == '' && newData.child('expiresAt').val() > now && root.child('pairs').child(newData.child('pairId').val()).child('meta').child('createdBy').val() == auth.uid && root.child('pairs').child(newData.child('pairId').val()).child('meta').child('inviteCode').val() == $code) || (data.exists() && data.child('usedBy').val() == '' && data.child('createdBy').val() != auth.uid && newData.child('usedBy').val() == auth.uid && newData.child('pairId').val() == data.child('pairId').val() && newData.child('createdBy').val() == data.child('createdBy').val() && newData.child('createdAt').val() == data.child('createdAt').val() && newData.child('expiresAt').val() == data.child('expiresAt').val()))",
+        ".validate": "newData.hasChildren(['pairId','createdBy','createdAt','expiresAt','usedBy']) && newData.child('pairId').isString() && newData.child('createdBy').isString() && newData.child('expiresAt').isNumber() && newData.child('usedBy').isString()"
+      }
+    },
+    "pairs": {
+      "$pairId": {
+        ".read": "auth != null && data.child('members').child(auth.uid).exists()",
+        "meta": {
+          ".write": "auth != null && !data.exists() && newData.child('createdBy').val() == auth.uid && newData.child('inviteCode').isString()",
+          ".validate": "newData.hasChildren(['createdBy','createdAt','inviteCode','membersLimit']) && newData.child('membersLimit').val() == 2"
+        },
+        "members": {
+          "$uid": {
+            ".write": "auth != null && auth.uid == $uid && !data.exists() && newData.exists() && ((root.child('pairs').child($pairId).child('meta').child('createdBy').val() == auth.uid && !newData.hasChild('inviteCode')) || (root.child('pairs').child($pairId).child('members').numChildren() == 1 && root.child('pairs').child($pairId).child('members').child(root.child('pairs').child($pairId).child('meta').child('createdBy').val()).exists() && newData.child('inviteCode').isString() && root.child('pairInvites').child(newData.child('inviteCode').val()).child('pairId').val() == $pairId && root.child('pairInvites').child(newData.child('inviteCode').val()).child('usedBy').val() == auth.uid))",
+            ".validate": "newData.hasChildren(['uid','role','joinedAt']) && newData.child('uid').val() == auth.uid && newData.child('joinedAt').isNumber() && (newData.child('role').val() == 'owner' || newData.child('role').val() == 'partner')"
+          }
+        },
+        "locationConsent": {
+          "$uid": {
+            ".write": "auth != null && auth.uid == $uid && root.child('pairs').child($pairId).child('members').child(auth.uid).exists()",
+            ".validate": "newData.isBoolean()"
+          }
+        },
+        "locations": {
+          "$uid": {
+            ".write": "auth != null && auth.uid == $uid && root.child('pairs').child($pairId).child('members').child(auth.uid).exists() && root.child('pairs').child($pairId).child('locationConsent').child(auth.uid).val() == true",
+            ".validate": "newData.hasChildren(['latitude','longitude','updatedAt']) && newData.child('latitude').isNumber() && newData.child('longitude').isNumber()"
+          }
+        },
+        "battery": {
+          "$uid": {
+            ".write": "auth != null && auth.uid == $uid && root.child('pairs').child($pairId).child('members').child(auth.uid).exists()",
+            ".validate": "newData.hasChildren(['percent','charging','updatedAt']) && newData.child('percent').isNumber() && newData.child('charging').isBoolean()"
+          }
+        },
+        "presence": {
+          "$uid": {
+            ".write": "auth != null && auth.uid == $uid && root.child('pairs').child($pairId).child('members').child(auth.uid).exists()",
+            ".validate": "newData.hasChildren(['state','updatedAt']) && (newData.child('state').val() == 'online' || newData.child('state').val() == 'offline')"
+          }
+        },
+        "activityConsent": {
+          "$uid": {
+            ".write": "auth != null && auth.uid == $uid && root.child('pairs').child($pairId).child('members').child(auth.uid).exists()",
+            ".validate": "newData.isBoolean()"
+          }
+        },
+        "activity": {
+          "$uid": {
+            ".write": "auth != null && auth.uid == $uid && root.child('pairs').child($pairId).child('members').child(auth.uid).exists() && root.child('pairs').child($pairId).child('activityConsent').child(auth.uid).val() == true",
+            ".validate": "newData.numChildren() <= 5"
+          }
+        },
+        "messages": {
+          "$messageId": {
+            ".write": "auth != null && root.child('pairs').child($pairId).child('members').child(auth.uid).exists() && !data.exists() && newData.child('senderUid').val() == auth.uid",
+            ".validate": "newData.hasChildren(['senderUid','type','body','attachment','mimeType','createdAt']) && newData.child('type').isString() && newData.child('body').isString() && newData.child('body').val().length <= 4000 && newData.child('attachment').isString() && newData.child('attachment').val().length <= 1100000 && newData.child('createdAt').isNumber()"
+          }
+        },
+        "receipts": {
+          "$messageId": {
+            "$uid": {
+              ".write": "auth != null && auth.uid == $uid && root.child('pairs').child($pairId).child('members').child(auth.uid).exists() && root.child('pairs').child($pairId).child('messages').child($messageId).exists()",
+              ".validate": "newData.isNumber()"
+            }
+          }
+        },
+        "typing": {
+          "$uid": {
+            ".write": "auth != null && auth.uid == $uid && root.child('pairs').child($pairId).child('members').child(auth.uid).exists()",
+            ".validate": "newData.hasChildren(['typing','updatedAt']) && newData.child('typing').isBoolean()"
+          }
+        },
+        "missingYou": {
+          "$eventId": {
+            ".write": "auth != null && root.child('pairs').child($pairId).child('members').child(auth.uid).exists() && !data.exists() && newData.child('senderUid').val() == auth.uid",
+            ".validate": "newData.hasChildren(['senderUid','createdAt']) && newData.child('createdAt').isNumber()"
+          }
+        }
+      }
+    }
+  }
+}
