@@ -37,7 +37,7 @@ class LocoraMessagingService : FirebaseMessagingService() {
         )
         val text = if (kind == "missing_you") "Someone is thinking of you." else "You have a private update."
         val notification = NotificationCompat.Builder(this, channelId)
-            .setSmallIcon(R.drawable.ic_locora_launcher)
+            .setSmallIcon(R.drawable.ic_locora_notification)
             .setContentTitle("LOCORA")
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
