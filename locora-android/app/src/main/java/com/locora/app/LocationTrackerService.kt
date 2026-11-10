@@ -28,11 +28,18 @@ class LocationTrackerService : Service() {
         callback = object : LocationCallback() {
             override fun onLocationResult(result: LocationResult) {
                 val loc = result.lastLocation ?: return
-                getSharedPreferences("locora_local", Context.MODE_PRIVATE).edit()
+                val prefs = getSharedPreferences("locora_local", Context.MODE_PRIVATE)
+                prefs.edit()
                     .putString("last_lat", loc.latitude.toString())
                     .putString("last_lon", loc.longitude.toString())
                     .putLong("last_location_at", System.currentTimeMillis())
                     .apply()
+                val pairId = prefs.getString("cloud_pair_id", "").orEmpty()
+                if (pairId.isNotBlank()) {
+                    CloudRepository.publishLocation(this@LocationTrackerService, pairId, loc.latitude, loc.longitude)
+                    val battery = LocalStore.battery(this@LocationTrackerService)
+                    CloudRepository.updateBattery(this@LocationTrackerService, pairId, battery.percent, battery.charging)
+                }
             }
         }
     }
