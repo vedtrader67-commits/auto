@@ -123,6 +123,7 @@ class MainActivity : FragmentActivity() {
                         location = currentPoint,
                         pairId = activePairId,
                         onStartLocation = { requestLocation() },
+                        onStopLocation = { stopLocationCollection() },
                         onRefreshLocation = { refreshLocation() },
                         onBackgroundLocation = { requestBackgroundLocation() },
                         onUsageSettings = { startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) },
@@ -191,6 +192,11 @@ class MainActivity : FragmentActivity() {
         catch (_: Exception) { }
     }
 
+    private fun stopLocationCollection() {
+        if (activePairId.isNotBlank()) CloudRepository.setLocationConsent(this, activePairId, false)
+        stopService(Intent(this, LocationTrackerService::class.java))
+    }
+
     private fun readCachedLocation() {
         val p = getSharedPreferences("locora_local", Context.MODE_PRIVATE)
         val lat = p.getString("last_lat", null)?.toDoubleOrNull()
@@ -228,6 +234,7 @@ private fun LocoraApp(
     location: Pair<Double, Double>?,
     pairId: String,
     onStartLocation: () -> Unit,
+    onStopLocation: () -> Unit,
     onRefreshLocation: () -> Unit,
     onBackgroundLocation: () -> Unit,
     onUsageSettings: () -> Unit,
@@ -294,7 +301,7 @@ private fun LocoraApp(
                     partnerBattery?.percent ?: -1, partnerBattery?.charging ?: false,
                     partnerLastSeen,
                     partnerLocationUpdatedAt,
-                    onStartLocation, onRefreshLocation,
+                    onStartLocation, onStopLocation, onRefreshLocation,
                     onMissingYou = {
                         CloudRepository.sendMissingYou(context, pairId) { error ->
                             missingMessage = error ?: "Missing You notification accepted by Firebase."
@@ -347,6 +354,7 @@ private fun MapScreen(
     partnerLastSeen: Long,
     partnerLocationUpdatedAt: Long,
     onStartLocation: () -> Unit,
+    onStopLocation: () -> Unit,
     onRefresh: () -> Unit,
     onMissingYou: () -> Unit,
     missingMessage: String
@@ -411,6 +419,9 @@ private fun MapScreen(
                     Icon(Icons.Default.GpsFixed, null, tint = Ink)
                     Spacer(Modifier.width(8.dp))
                     Text("Enable location collection", color = Ink, fontWeight = FontWeight.Bold)
+                }
+                OutlinedButton(onClick = onStopLocation, modifier = Modifier.fillMaxWidth()) {
+                    Text("Stop sharing my location")
                 }
                 OutlinedButton(
                     onClick = onMissingYou,
