@@ -383,8 +383,7 @@ private fun MapScreen(
                                 else -> "Lat %.5f · Lon %.5f · %s".format(partner.latitude, partner.longitude,
                                     if (partnerOnline) "online" else "last known")
                             } + if (!partnerOnline && partnerLastSeen > 0L) " · last seen " +
-                                DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(partnerLastSeen)) else ""
-                            },
+                                DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(partnerLastSeen)) else "",
                             color = Muted, fontSize = 10.sp
                         )
                     }
