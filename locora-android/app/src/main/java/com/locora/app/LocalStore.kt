@@ -24,7 +24,8 @@ data class ChatMessage(
     val body: String,
     val createdAt: Long,
     val type: String = "text",
-    val attachment: String = ""
+    val attachment: String = "",
+    val senderUid: String = ""
 )
 
 data class RecentApp(val label: String, val packageName: String, val lastUsed: Long)
@@ -48,7 +49,8 @@ object LocalStore {
                 body = o.optString("body"),
                 createdAt = o.optLong("createdAt"),
                 type = o.optString("type", "text"),
-                attachment = o.optString("attachment")
+                attachment = o.optString("attachment"),
+                senderUid = o.optString("senderUid")
             )
         }
         return result
@@ -68,7 +70,7 @@ object LocalStore {
         list.forEach { item ->
             array.put(JSONObject().put("id", item.id).put("body", item.body)
                 .put("createdAt", item.createdAt).put("type", item.type)
-                .put("attachment", item.attachment))
+                .put("attachment", item.attachment).put("senderUid", item.senderUid))
         }
         prefs(context).edit().putString(MSG_KEY, array.toString()).apply()
         return message
