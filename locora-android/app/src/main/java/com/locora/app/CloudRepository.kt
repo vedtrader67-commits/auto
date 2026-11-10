@@ -375,7 +375,7 @@ object CloudRepository {
     }
 
     fun listenMessages(context: Context, pairId: String, callback: (List<CloudMessage>) -> Unit): ValueEventListener {
-        val ref = root(context).child("pairs").child(pairId).child("messages").orderByChild("createdAt").limitToLast(300)
+        val ref = root(context).child("pairs").child(pairId).child("messages").orderByChild("createdAt")
         val listener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val list = snapshot.children.mapNotNull { item ->
@@ -400,8 +400,7 @@ object CloudRepository {
     }
 
     fun removeMessagesListener(context: Context, pairId: String, listener: ValueEventListener) {
-        root(context).child("pairs").child(pairId).child("messages").orderByChild("createdAt")
-            .limitToLast(300).removeEventListener(listener)
+        root(context).child("pairs").child(pairId).child("messages").orderByChild("createdAt").removeEventListener(listener)
     }
 
     fun sendMessage(context: Context, pairId: String, type: String, body: String, attachment: String = "", mime: String = "", done: (String?) -> Unit) {
@@ -424,6 +423,39 @@ object CloudRepository {
         val uid = currentUid() ?: return
         root(context).child("pairs").child(pairId).child("receipts").child(messageId).child(uid)
             .setValue(ServerValue.TIMESTAMP)
+    }
+
+
+    fun listenTyping(context: Context, pairId: String, partnerUid: String, callback: (Boolean) -> Unit): ValueEventListener {
+        val ref = root(context).child("pairs").child(pairId).child("typing").child(partnerUid)
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val typing = snapshot.child("typing").getValue(Boolean::class.java) ?: false
+                val updated = snapshot.child("updatedAt").getValue(Long::class.java) ?: 0L
+                callback(typing && System.currentTimeMillis() - updated < 15000L)
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        }
+        ref.addValueEventListener(listener)
+        return listener
+    }
+
+    fun removeTypingListener(context: Context, pairId: String, partnerUid: String, listener: ValueEventListener) {
+        root(context).child("pairs").child(pairId).child("typing").child(partnerUid).removeEventListener(listener)
+    }
+
+    fun listenReadReceipt(context: Context, pairId: String, messageId: String, recipientUid: String, callback: (Boolean) -> Unit): ValueEventListener {
+        val ref = root(context).child("pairs").child(pairId).child("receipts").child(messageId).child(recipientUid)
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) { callback(snapshot.exists()) }
+            override fun onCancelled(error: DatabaseError) {}
+        }
+        ref.addValueEventListener(listener)
+        return listener
+    }
+
+    fun removeReadReceiptListener(context: Context, pairId: String, messageId: String, recipientUid: String, listener: ValueEventListener) {
+        root(context).child("pairs").child(pairId).child("receipts").child(messageId).child(recipientUid).removeEventListener(listener)
     }
 
     fun setTyping(context: Context, pairId: String, typing: Boolean) {
