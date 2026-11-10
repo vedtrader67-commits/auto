@@ -99,6 +99,8 @@ fun SettingsScreen(
     val context = LocalContext.current
     var refreshBattery by remember { mutableIntStateOf(0) }
     val battery = remember(refreshBattery) { LocalStore.battery(context) }
+    var notifierUrl by remember { mutableStateOf(CloudRepository.pushServerUrl(context)) }
+    var notifierStatus by remember { mutableStateOf("") }
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
@@ -134,6 +136,25 @@ fun SettingsScreen(
             Text("Open Usage Access settings")
         }
         InfoCard("Chat lock", "A four-digit PIN protects chat on this device. The PIN is stored as a salted PBKDF2 hash.")
+        Text("MISSING YOU PUSH SERVICE", color = ActivityPink, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+        Surface(color = ActivityPanel, shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                Text("Notification server URL", color = Color.White, fontWeight = FontWeight.SemiBold)
+                Text("Deploy the included Render service, then paste its HTTPS URL here. The server sends offline alerts securely without putting admin credentials in the APK.", color = ActivityMuted, fontSize = 10.sp)
+                OutlinedTextField(
+                    value = notifierUrl,
+                    onValueChange = { notifierUrl = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    placeholder = { Text("https://your-locora-service.onrender.com") }
+                )
+                OutlinedButton(
+                    onClick = { notifierStatus = CloudRepository.savePushServerUrl(context, notifierUrl) ?: "Notification server URL saved." },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Save notification server") }
+                if (notifierStatus.isNotBlank()) Text(notifierStatus, color = if (notifierStatus.contains("saved")) Green else Color(0xFFFF9494), fontSize = 10.sp)
+            }
+        }
         Text("CONNECTED PRIVATE PAIR", color = ActivityPink, fontWeight = FontWeight.Bold, fontSize = 11.sp)
         Surface(color = ActivityPanel, shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
