@@ -1,0 +1,28 @@
+{
+  "project_info": {
+    "project_number": "146044768185",
+    "project_id": "lacora-fd114",
+    "storage_bucket": "lacora-fd114.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:146044768185:android:4fe9c51841a0e38f2f7068",
+        "android_client_info": {
+          "package_name": "com.locora.app"
+        }
+      },
+      "api_key": [
+        {
+          "current_key": "AIzaSyAZ6BNU09ZuCxL46s9QJXyaWCwdhcwjyKQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
