@@ -303,7 +303,7 @@ private fun LocoraApp(
                     missingMessage = missingMessage
                 )
                 "Chat" -> ChatScreen(chatUnlocked, { chatUnlocked = true }, pairId)
-                "Activity" -> ActivityScreen(onUsageSettings, pairId)
+                "Activity" -> ActivityScreen(onUsageSettings, pairId, partnerUid)
                 else -> SettingsScreen(onStartLocation, onBackgroundLocation, onUsageSettings, pairId, onSignOut)
             }
         }
