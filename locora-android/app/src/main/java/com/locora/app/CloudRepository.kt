@@ -5,7 +5,13 @@ import android.util.Base64
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import java.io.ByteArrayOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
+import java.util.concurrent.Executors
+import org.json.JSONObject
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
 import com.google.android.gms.tasks.Tasks
@@ -36,6 +42,8 @@ object CloudRepository {
     private const val PAIR_KEY = "cloud_pair_id"
     private const val DB_URL_KEY = "cloud_database_url"
     private val random = SecureRandom()
+    private val networkExecutor = Executors.newSingleThreadExecutor()
+    private val mainHandler = Handler(Looper.getMainLooper())
     @Volatile private var cachedDb: FirebaseDatabase? = null
     private val auth: FirebaseAuth get() = FirebaseAuth.getInstance()
 
@@ -433,13 +441,54 @@ object CloudRepository {
         root(context).child("pairs").child(pairId).child("activity").child(uid).setValue(entries)
     }
 
+    fun pushServerUrl(context: Context): String =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("cloud_push_server_url", "").orEmpty()
+
+    fun savePushServerUrl(context: Context, value: String): String? {
+        val url = value.trim().trimEnd('/')
+        if (!url.startsWith("https://") || url.length > 300) return "Enter your deployed HTTPS notification server URL."
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putString("cloud_push_server_url", url).apply()
+        return null
+    }
+
     fun sendMissingYou(context: Context, pairId: String, done: (String?) -> Unit) {
-        val uid = currentUid()
-        if (uid == null) { done("Sign in first."); return }
-        val ref = root(context).child("pairs").child(pairId).child("missingYou").push()
-        ref.setValue(mapOf("senderUid" to uid, "createdAt" to ServerValue.TIMESTAMP))
-            .addOnSuccessListener { done(null) }
-            .addOnFailureListener { done(it.message ?: "Could not send.") }
+        val user = auth.currentUser
+        if (user == null) { done("Sign in first."); return }
+        val server = pushServerUrl(context)
+        if (server.isBlank()) { done("Set up the LOCORA notification server URL in Settings first."); return }
+        user.getIdToken(true).addOnSuccessListener { tokenResult ->
+            val token = tokenResult.token
+            if (token.isNullOrBlank()) { done("Could not verify your sign-in."); return@addOnSuccessListener }
+            networkExecutor.execute {
+                var result: String? = null
+                var connection: HttpURLConnection? = null
+                try {
+                    connection = (URL(server + "/v1/missing-you").openConnection() as HttpURLConnection)
+                    connection.requestMethod = "POST"
+                    connection.connectTimeout = 12000
+                    connection.readTimeout = 12000
+                    connection.doOutput = true
+                    connection.setRequestProperty("Content-Type", "application/json")
+                    connection.setRequestProperty("Authorization", "Bearer " + token)
+                    connection.outputStream.use {
+                        it.write(JSONObject().put("pairId", pairId).toString().toByteArray(Charsets.UTF_8))
+                    }
+                    val status = connection.responseCode
+                    val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+                    val response = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                    if (status !in 200..299) {
+                        result = try { JSONObject(response).optString("detail", "Notification request failed ($status).") }
+                                 catch (_: Exception) { "Notification request failed ($status)." }
+                    }
+                } catch (e: Exception) {
+                    result = e.message ?: "Could not reach notification server."
+                } finally {
+                    connection?.disconnect()
+                }
+                mainHandler.post { done(result) }
+            }
+        }.addOnFailureListener { done(it.message ?: "Could not verify your sign-in.") }
     }
 
     fun observeMissingYou(context: Context, pairId: String, callback: (String) -> Unit): ChildEventListener {
